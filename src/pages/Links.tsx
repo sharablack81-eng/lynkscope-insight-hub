@@ -4,18 +4,11 @@ import { Input } from "@/components/ui/input";
 import {
   Search,
   Plus,
-  Copy,
-  Edit,
-  Trash2,
-  BarChart3,
-  ExternalLink,
   LinkIcon as LinkIconLucide,
-  X
 } from "lucide-react";
 import { toast } from "sonner";
 import LinkCard from "@/components/links/LinkCard";
 import AddLinkModal from "@/components/links/AddLinkModal";
-import AnalyticsDrawer from "@/components/links/AnalyticsDrawer";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 export interface Link {
@@ -31,7 +24,6 @@ const Links = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<Link | null>(null);
-  const [analyticsLink, setAnalyticsLink] = useState<Link | null>(null);
   
   // Placeholder data
   const [links, setLinks] = useState<Link[]>([
@@ -107,9 +99,6 @@ const Links = () => {
     setSelectedLink(null);
   };
 
-  const handleViewAnalytics = (link: Link) => {
-    setAnalyticsLink(link);
-  };
 
   return (
     <DashboardLayout>
@@ -193,7 +182,7 @@ const Links = () => {
                   onCopy={handleCopyUrl}
                   onEdit={handleEditLink}
                   onDelete={handleDeleteLink}
-                  onViewAnalytics={handleViewAnalytics}
+                  onViewAnalytics={() => {}} // No longer needed, using navigate inside LinkCard
                 />
               ))}
             </div>
@@ -212,11 +201,6 @@ const Links = () => {
         editingLink={selectedLink}
       />
 
-      {/* Analytics Drawer */}
-      <AnalyticsDrawer
-        link={analyticsLink}
-        onClose={() => setAnalyticsLink(null)}
-      />
     </DashboardLayout>
   );
 };
