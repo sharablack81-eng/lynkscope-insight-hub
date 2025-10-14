@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Copy, Edit, Trash2, BarChart3, ExternalLink } from "lucide-react";
 import { Link } from "@/pages/Links";
@@ -20,6 +21,7 @@ const platformColors = {
 };
 
 const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: LinkCardProps) => {
+  const navigate = useNavigate();
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -75,7 +77,7 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onViewAnalytics(link)}
+          onClick={() => navigate(`/analytics/${link.id}`)}
           className="flex-1 hover:border-primary hover:bg-primary/10 transition-all"
         >
           <BarChart3 className="w-4 h-4 mr-2" />
