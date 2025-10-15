@@ -78,7 +78,8 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
           variant="outline"
           size="sm"
           onClick={() => {
-            console.log('Navigating to analytics for link:', link.id, link);
+            console.log('Link data:', { id: link.id, fullLink: link });
+            console.log('Will navigate to:', `/analytics/${link.id}`);
             navigate(`/analytics/${link.id}`);
           }}
           className="flex-1 hover:border-primary hover:bg-primary/10 transition-all"
