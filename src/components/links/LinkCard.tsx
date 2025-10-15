@@ -77,11 +77,7 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            console.log('Link data:', { id: link.id, fullLink: link });
-            console.log('Will navigate to:', `/analytics/${link.id}`);
-            navigate(`/analytics/${link.id}`);
-          }}
+          onClick={() => navigate(`/analytics/${link.id}`)}
           className="flex-1 hover:border-primary hover:bg-primary/10 transition-all"
         >
           <BarChart3 className="w-4 h-4 mr-2" />
