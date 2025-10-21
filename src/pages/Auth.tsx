@@ -1,20 +1,110 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LinkIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
+import { toast } from "sonner";
+import { z } from "zod";
+
+const emailSchema = z.string().email("Please enter a valid email address");
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Redirect to dashboard if logged in
+        if (session?.user) {
+          navigate("/dashboard");
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For demo purposes, just navigate to dashboard
-    navigate("/dashboard");
+    setLoading(true);
+
+    try {
+      // Validate inputs
+      emailSchema.parse(email);
+      passwordSchema.parse(password);
+
+      if (isLogin) {
+        // Login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            toast.error("Invalid email or password");
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
+
+        toast.success("Logged in successfully!");
+      } else {
+        // Sign up
+        const redirectUrl = `${window.location.origin}/`;
+        
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectUrl,
+          },
+        });
+
+        if (error) {
+          if (error.message.includes("already registered")) {
+            toast.error("An account with this email already exists");
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
+
+        toast.success("Account created successfully!");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,17 +147,13 @@ const Auth = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-input border-border focus:border-primary transition-colors"
                 required
+                disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                {isLogin && (
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Forgot Password?
-                  </a>
-                )}
               </div>
               <Input
                 id="password"
@@ -77,15 +163,23 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-input border-border focus:border-primary transition-colors"
                 required
+                disabled={loading}
+                minLength={6}
               />
+              {!isLogin && (
+                <p className="text-xs text-muted-foreground">
+                  Password must be at least 6 characters
+                </p>
+              )}
             </div>
 
             <Button
               type="submit"
-              className="w-full gradient-purple glow-purple hover:glow-purple-strong hover:scale-105 transition-all"
+              disabled={loading}
+              className="w-full gradient-purple glow-purple hover:glow-purple-strong hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
             >
-              {isLogin ? "Login" : "Sign Up Free"}
+              {loading ? "Please wait..." : (isLogin ? "Login" : "Sign Up Free")}
             </Button>
           </form>
 
@@ -95,7 +189,8 @@ const Auth = () => {
               {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-primary hover:underline font-medium"
+                disabled={loading}
+                className="text-primary hover:underline font-medium disabled:opacity-50"
               >
                 {isLogin ? "Sign Up Free" : "Login"}
               </button>
