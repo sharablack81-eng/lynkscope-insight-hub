@@ -36,10 +36,29 @@ const Dashboard = () => {
   ]);
   const [chartData, setChartData] = useState<number[]>(Array(7).fill(0));
   const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState("user");
 
   useEffect(() => {
     fetchDashboardData();
+    fetchUserProfile();
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single();
+        
+        setDisplayName(profile?.display_name || "user");
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -137,7 +156,7 @@ const Dashboard = () => {
       <div className="flex-1 p-6 space-y-6 overflow-auto">
         {/* Welcome Header */}
         <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, User</h1>
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {displayName}</h1>
           <p className="text-muted-foreground">Your Link Overview</p>
         </div>
 

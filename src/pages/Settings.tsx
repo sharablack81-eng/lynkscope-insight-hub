@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,11 +27,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
   const navigate = useNavigate();
-  const [displayName, setDisplayName] = useState("John Doe");
-  const [email, setEmail] = useState("john@example.com");
+  const [displayName, setDisplayName] = useState("user");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [accentColor, setAccentColor] = useState("#8B5CF6");
   const [backgroundAnimation, setBackgroundAnimation] = useState(true);
@@ -48,10 +50,52 @@ const Settings = () => {
     { name: "Pink", value: "#EC4899" },
   ];
 
-  const handleSaveProfile = () => {
-    toast.success("Profile saved successfully!", {
-      description: "Your changes have been updated.",
-    });
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setEmail(user.email || "");
+        
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        setDisplayName(profile?.display_name || "user");
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      toast.error("Failed to load profile data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: displayName })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success("Profile saved successfully!", {
+        description: "Your changes have been updated.",
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error("Failed to save profile");
+    }
   };
 
   const handleSavePreferences = () => {
@@ -128,8 +172,9 @@ const Settings = () => {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-input border-border"
+                    readOnly
+                    disabled
+                    className="bg-input border-border opacity-60 cursor-not-allowed"
                   />
                 </div>
 
