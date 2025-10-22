@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,52 +10,130 @@ import {
   BarChart3
 } from "lucide-react";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const AnalyticsOverview = () => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
+  const [loading, setLoading] = useState(true);
+  const [overviewStats, setOverviewStats] = useState({
+    totalClicks: 0,
+    totalLinks: 0,
+    topPlatform: "N/A",
+    avgCTR: "0%"
+  });
+  const [engagementData, setEngagementData] = useState<any>({
+    '7d': [],
+    '30d': [],
+    '90d': []
+  });
+  const [platformData, setPlatformData] = useState<any[]>([]);
+  const [topLinks, setTopLinks] = useState<any[]>([]);
 
-  // Mock aggregated data across all links
-  const overviewStats = {
-    totalClicks: 7892,
-    totalLinks: 3,
-    topPlatform: "Instagram",
-    avgCTR: "12.4%"
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      // Fetch all links for the user
+      const { data: linksData, error: linksError } = await supabase
+        .from('links')
+        .select('*');
+
+      if (linksError) throw linksError;
+
+      // Fetch all clicks
+      const { data: clicksData, error: clicksError } = await supabase
+        .from('link_clicks')
+        .select('*');
+
+      if (clicksError) throw clicksError;
+
+      // Calculate total clicks
+      const totalClicks = clicksData?.length || 0;
+
+      // Calculate platform breakdown
+      const platformCounts: Record<string, number> = {};
+      const platformColors: Record<string, string> = {
+        'TikTok': '#00F2EA',
+        'Instagram': '#E1306C',
+        'YouTube': '#FF0000',
+        'Other': '#888888'
+      };
+
+      for (const link of linksData || []) {
+        const linkClicks = clicksData?.filter(c => c.link_id === link.id).length || 0;
+        platformCounts[link.platform] = (platformCounts[link.platform] || 0) + linkClicks;
+      }
+
+      const platformArray = Object.entries(platformCounts).map(([name, value]) => ({
+        name,
+        value,
+        color: platformColors[name] || '#888888'
+      }));
+
+      // Top platform
+      const topPlatform = platformArray.length > 0 
+        ? platformArray.reduce((a, b) => a.value > b.value ? a : b).name 
+        : "N/A";
+
+      // Calculate top links
+      const linksWithClicks = await Promise.all(
+        (linksData || []).map(async (link) => {
+          const clicks = clicksData?.filter(c => c.link_id === link.id).length || 0;
+          return {
+            id: link.id,
+            title: link.title,
+            clicks,
+            platform: link.platform
+          };
+        })
+      );
+
+      const sortedLinks = linksWithClicks
+        .sort((a, b) => b.clicks - a.clicks)
+        .slice(0, 3);
+
+      // Calculate engagement over time
+      const now = new Date();
+      const engagement7d = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dayClicks = clicksData?.filter(c => {
+          const clickDate = new Date(c.clicked_at);
+          return clickDate.toDateString() === date.toDateString();
+        }).length || 0;
+        
+        engagement7d.push({
+          date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          clicks: dayClicks
+        });
+      }
+
+      setOverviewStats({
+        totalClicks,
+        totalLinks: linksData?.length || 0,
+        topPlatform,
+        avgCTR: "0%"
+      });
+
+      setPlatformData(platformArray);
+      setTopLinks(sortedLinks);
+      setEngagementData({
+        '7d': engagement7d,
+        '30d': [],
+        '90d': []
+      });
+
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      toast.error("Failed to load analytics");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const engagementData = {
-    '7d': [
-      { date: 'Mon', clicks: 245 },
-      { date: 'Tue', clicks: 312 },
-      { date: 'Wed', clicks: 189 },
-      { date: 'Thu', clicks: 402 },
-      { date: 'Fri', clicks: 356 },
-      { date: 'Sat', clicks: 289 },
-      { date: 'Sun', clicks: 198 }
-    ],
-    '30d': [
-      { date: 'Week 1', clicks: 1248 },
-      { date: 'Week 2', clicks: 1567 },
-      { date: 'Week 3', clicks: 1892 },
-      { date: 'Week 4', clicks: 2185 }
-    ],
-    '90d': [
-      { date: 'Month 1', clicks: 2456 },
-      { date: 'Month 2', clicks: 2789 },
-      { date: 'Month 3', clicks: 2647 }
-    ]
-  };
-
-  const platformData = [
-    { name: 'Instagram', value: 3891, color: '#E1306C' },
-    { name: 'TikTok', value: 2654, color: '#00F2EA' },
-    { name: 'YouTube', value: 1247, color: '#FF0000' }
-  ];
-
-  const topLinks = [
-    { id: 1, title: "Instagram Bio Link", clicks: 3891, platform: "Instagram" },
-    { id: 2, title: "TikTok Campaign", clicks: 2654, platform: "TikTok" },
-    { id: 3, title: "YouTube Promo", clicks: 1247, platform: "YouTube" }
-  ];
 
   const StatCard = ({ icon: Icon, title, value, change }: any) => (
     <Card className="glass-card border-border hover:border-primary/50 transition-all hover:scale-105 animate-scale-in">
@@ -69,6 +147,16 @@ const AnalyticsOverview = () => {
       </CardContent>
     </Card>
   );
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -91,7 +179,6 @@ const AnalyticsOverview = () => {
               icon={MousePointerClick}
               title="Total Clicks"
               value={overviewStats.totalClicks.toLocaleString()}
-              change="+12.3% from last period"
             />
             <StatCard
               icon={Users}
@@ -107,7 +194,6 @@ const AnalyticsOverview = () => {
               icon={TrendingUp}
               title="Avg CTR"
               value={overviewStats.avgCTR}
-              change="+2.1% from last period"
             />
           </div>
 
@@ -120,25 +206,19 @@ const AnalyticsOverview = () => {
                   <CardDescription>Total clicks across all links</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  {(['7d', '30d', '90d'] as const).map((range) => (
-                    <Button
-                      key={range}
-                      variant={timeRange === range ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTimeRange(range)}
-                      className={timeRange === range ? "gradient-purple" : ""}
-                    >
-                      {range === '7d' && 'Last 7 Days'}
-                      {range === '30d' && 'Last 30 Days'}
-                      {range === '90d' && 'Last 90 Days'}
-                    </Button>
-                  ))}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gradient-purple"
+                  >
+                    Last 7 Days
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={engagementData[timeRange]}>
+                <LineChart data={engagementData['7d']}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis 
                     dataKey="date" 
@@ -176,31 +256,37 @@ const AnalyticsOverview = () => {
                 <CardDescription>Click distribution by platform</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={platformData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {platformData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {platformData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={platformData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {platformData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No data available
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -211,28 +297,34 @@ const AnalyticsOverview = () => {
                 <CardDescription>Your most clicked links</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {topLinks.map((link, index) => (
-                    <div
-                      key={link.id}
-                      className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border hover:border-primary/50 transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                          {index + 1}
+                {topLinks.length > 0 ? (
+                  <div className="space-y-4">
+                    {topLinks.map((link, index) => (
+                      <div
+                        key={link.id}
+                        className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border hover:border-primary/50 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <div className="font-semibold">{link.title}</div>
+                            <div className="text-xs text-muted-foreground">{link.platform}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-semibold">{link.title}</div>
-                          <div className="text-xs text-muted-foreground">{link.platform}</div>
+                        <div className="text-right">
+                          <div className="font-bold text-primary">{link.clicks.toLocaleString()}</div>
+                          <div className="text-xs text-muted-foreground">clicks</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-primary">{link.clicks.toLocaleString()}</div>
-                        <div className="text-xs text-muted-foreground">clicks</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                    No links yet
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

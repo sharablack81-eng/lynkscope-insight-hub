@@ -11,6 +11,7 @@ import Analytics from "./pages/Analytics";
 import AnalyticsOverview from "./pages/AnalyticsOverview";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Redirect from "./pages/Redirect";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/l/:shortCode" element={<Redirect />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />

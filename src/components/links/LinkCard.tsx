@@ -48,14 +48,17 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
         <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
           {link.title}
         </h3>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
           <ExternalLink className="w-4 h-4" />
           <span className="truncate flex-1">{link.url}</span>
+        </div>
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => onCopy(link.url)}
-            className="p-1 hover:bg-accent rounded transition-colors"
+            onClick={() => onCopy(`${window.location.origin}/l/${(link as any).short_code}`)}
+            className="text-xs text-primary hover:underline flex items-center gap-1"
           >
-            <Copy className="w-4 h-4 hover:text-primary transition-colors" />
+            <Copy className="w-3 h-3" />
+            Copy Short URL
           </button>
         </div>
       </div>

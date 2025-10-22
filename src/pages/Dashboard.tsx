@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
@@ -6,31 +7,129 @@ import {
   BarChart3,
   Crown
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Dashboard = () => {
-  const metrics = [
+  const [metrics, setMetrics] = useState([
     {
       label: "Total Clicks",
-      value: "12,547",
-      change: "+23%",
-      trend: "up",
+      value: "0",
+      change: "0%",
+      trend: "neutral",
       icon: MousePointerClick
     },
     {
       label: "Top Platform",
-      value: "Instagram",
-      change: "42% of traffic",
+      value: "N/A",
+      change: "0% of traffic",
       trend: "neutral",
       icon: TrendingUp
     },
     {
       label: "Last 7 Days",
-      value: "3,891",
-      change: "+15%",
-      trend: "up",
+      value: "0",
+      change: "0%",
+      trend: "neutral",
       icon: BarChart3
     }
-  ];
+  ]);
+  const [chartData, setChartData] = useState<number[]>(Array(7).fill(0));
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch all links
+      const { data: linksData, error: linksError } = await supabase
+        .from('links')
+        .select('*');
+
+      if (linksError) throw linksError;
+
+      // Fetch all clicks
+      const { data: clicksData, error: clicksError } = await supabase
+        .from('link_clicks')
+        .select('*');
+
+      if (clicksError) throw clicksError;
+
+      const totalClicks = clicksData?.length || 0;
+
+      // Calculate last 7 days clicks
+      const now = new Date();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const last7DaysClicks = clicksData?.filter(c => {
+        const clickDate = new Date(c.clicked_at);
+        return clickDate >= sevenDaysAgo;
+      }).length || 0;
+
+      // Calculate platform breakdown
+      const platformCounts: Record<string, number> = {};
+      for (const link of linksData || []) {
+        const linkClicks = clicksData?.filter(c => c.link_id === link.id).length || 0;
+        platformCounts[link.platform] = (platformCounts[link.platform] || 0) + linkClicks;
+      }
+
+      const topPlatform = Object.entries(platformCounts).length > 0
+        ? Object.entries(platformCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0]
+        : "N/A";
+
+      const topPlatformPercentage = totalClicks > 0 && topPlatform !== "N/A"
+        ? Math.round((platformCounts[topPlatform] / totalClicks) * 100)
+        : 0;
+
+      // Calculate chart data for last 7 days
+      const chartArray = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dayClicks = clicksData?.filter(c => {
+          const clickDate = new Date(c.clicked_at);
+          return clickDate.toDateString() === date.toDateString();
+        }).length || 0;
+        chartArray.push(dayClicks);
+      }
+
+      setMetrics([
+        {
+          label: "Total Clicks",
+          value: totalClicks.toLocaleString(),
+          change: "+0%",
+          trend: "neutral",
+          icon: MousePointerClick
+        },
+        {
+          label: "Top Platform",
+          value: topPlatform,
+          change: `${topPlatformPercentage}% of traffic`,
+          trend: "neutral",
+          icon: TrendingUp
+        },
+        {
+          label: "Last 7 Days",
+          value: last7DaysClicks.toLocaleString(),
+          change: "+0%",
+          trend: "neutral",
+          icon: BarChart3
+        }
+      ]);
+
+      setChartData(chartArray);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const maxChartValue = Math.max(...chartData, 1);
 
   return (
     <DashboardLayout>
@@ -42,98 +141,98 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Your Link Overview</p>
         </div>
 
-        {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {metrics.map((metric, index) => (
-            <div
-              key={index}
-              className="glass-card p-6 rounded-xl hover:scale-105 hover:glow-purple transition-all duration-300 animate-scale-in group"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-                  <metric.icon className="w-6 h-6 text-primary" />
-                </div>
-                <span
-                  className={`text-sm px-2 py-1 rounded-full ${
-                    metric.trend === "up"
-                      ? "bg-green-500/20 text-green-500"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <>
+            {/* Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {metrics.map((metric, index) => (
+                <div
+                  key={index}
+                  className="glass-card p-6 rounded-xl hover:scale-105 hover:glow-purple transition-all duration-300 animate-scale-in group"
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  {metric.change}
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground mb-2">{metric.label}</div>
-              <div className="text-3xl font-bold">{metric.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Chart Section */}
-        <div className="glass-card p-6 rounded-xl animate-fade-in-up">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold">Performance Overview</h2>
-              <p className="text-sm text-muted-foreground">Last 7 days activity</p>
-            </div>
-            <Button variant="outline" size="sm">
-              View Details
-            </Button>
-          </div>
-
-          <div className="h-64 flex items-end gap-3">
-            {[65, 78, 82, 70, 88, 95, 100, 92, 85, 90, 97, 94, 89, 96].map((height, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-gradient-to-t from-primary to-purple-500 rounded-t-lg transition-all hover:from-primary/80 hover:to-purple-400 cursor-pointer animate-scale-in"
-                style={{ height: `${height}%`, animationDelay: `${i * 50}ms` }}
-              />
-            ))}
-          </div>
-
-          <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-            <span>Mon</span>
-            <span>Tue</span>
-            <span>Wed</span>
-            <span>Thu</span>
-            <span>Fri</span>
-            <span>Sat</span>
-            <span>Sun</span>
-          </div>
-        </div>
-
-        {/* Pro Features Preview */}
-        <div className="glass-card p-6 rounded-xl border-2 border-primary/30 relative overflow-hidden animate-fade-in-up">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
-          <div className="relative">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                <Crown className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold mb-2">Unlock Premium Features</h3>
-                <p className="text-muted-foreground mb-4">
-                  Get advanced analytics, custom domains, unlimited links, and more with LynkScope Pro.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
-                    Advanced Analytics
-                  </span>
-                  <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
-                    Custom Domains
-                  </span>
-                  <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
-                    Priority Support
-                  </span>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                      <metric.icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <span className="text-sm px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                      {metric.change}
+                    </span>
+                  </div>
+                  <div className="text-sm text-muted-foreground mb-2">{metric.label}</div>
+                  <div className="text-3xl font-bold">{metric.value}</div>
                 </div>
-                <Button className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105">
-                  Upgrade Now
-                </Button>
+              ))}
+            </div>
+
+            {/* Chart Section */}
+            <div className="glass-card p-6 rounded-xl animate-fade-in-up">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold">Performance Overview</h2>
+                  <p className="text-sm text-muted-foreground">Last 7 days activity</p>
+                </div>
+              </div>
+
+              <div className="h-64 flex items-end gap-3">
+                {chartData.map((clicks, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-primary to-purple-500 rounded-t-lg transition-all hover:from-primary/80 hover:to-purple-400 cursor-pointer animate-scale-in"
+                    style={{ 
+                      height: maxChartValue > 0 ? `${(clicks / maxChartValue) * 100}%` : '0%',
+                      minHeight: clicks > 0 ? '20px' : '0px',
+                      animationDelay: `${i * 50}ms` 
+                    }}
+                    title={`${clicks} clicks`}
+                  />
+                ))}
+              </div>
+
+              <div className="flex justify-between mt-4 text-xs text-muted-foreground">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
+                  <span key={i}>{day}</span>
+                ))}
               </div>
             </div>
-          </div>
-        </div>
+
+            {/* Pro Features Preview */}
+            <div className="glass-card p-6 rounded-xl border-2 border-primary/30 relative overflow-hidden animate-fade-in-up">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
+              <div className="relative">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                    <Crown className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold mb-2">Unlock Premium Features</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Get advanced analytics, custom domains, unlimited links, and more with LynkScope Pro.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
+                        Advanced Analytics
+                      </span>
+                      <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
+                        Custom Domains
+                      </span>
+                      <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
+                        Priority Support
+                      </span>
+                    </div>
+                    <Button className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105">
+                      Upgrade Now
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

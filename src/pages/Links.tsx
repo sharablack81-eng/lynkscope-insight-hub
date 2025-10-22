@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import LinkCard from "@/components/links/LinkCard";
 import AddLinkModal from "@/components/links/AddLinkModal";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Link {
   id: string;
@@ -18,40 +19,57 @@ export interface Link {
   platform: "TikTok" | "Instagram" | "YouTube" | "Other";
   clicks: number;
   createdAt: string;
+  short_code: string;
 }
 
 const Links = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<Link | null>(null);
-  
-  // Placeholder data
-  const [links, setLinks] = useState<Link[]>([
-    {
-      id: "1",
-      title: "YouTube Promo",
-      url: "https://lynk.to/youtube-promo",
-      platform: "YouTube",
-      clicks: 1247,
-      createdAt: "2025-01-15"
-    },
-    {
-      id: "2",
-      title: "Instagram Bio Link",
-      url: "https://lynk.to/insta-bio",
-      platform: "Instagram",
-      clicks: 3891,
-      createdAt: "2025-01-10"
-    },
-    {
-      id: "3",
-      title: "TikTok Campaign",
-      url: "https://lynk.to/tiktok-jan",
-      platform: "TikTok",
-      clicks: 2654,
-      createdAt: "2025-01-20"
+  const [links, setLinks] = useState<Link[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLinks();
+  }, []);
+
+  const fetchLinks = async () => {
+    try {
+      const { data: linksData, error: linksError } = await supabase
+        .from('links')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (linksError) throw linksError;
+
+      // Fetch click counts for each link
+      const linksWithClicks = await Promise.all(
+        (linksData || []).map(async (link) => {
+          const { count } = await supabase
+            .from('link_clicks')
+            .select('*', { count: 'exact', head: true })
+            .eq('link_id', link.id);
+
+          return {
+            id: link.id,
+            title: link.title,
+            url: link.url,
+            platform: link.platform as "TikTok" | "Instagram" | "YouTube" | "Other",
+            clicks: count || 0,
+            createdAt: link.created_at.split('T')[0],
+            short_code: link.short_code,
+          };
+        })
+      );
+
+      setLinks(linksWithClicks);
+    } catch (error) {
+      console.error('Error fetching links:', error);
+      toast.error("Failed to load links");
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const filteredLinks = links.filter(link =>
     link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -63,9 +81,21 @@ const Links = () => {
     toast.success("Link copied to clipboard!");
   };
 
-  const handleDeleteLink = (id: string) => {
-    setLinks(links.filter(link => link.id !== id));
-    toast.success("Link deleted successfully");
+  const handleDeleteLink = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('links')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setLinks(links.filter(link => link.id !== id));
+      toast.success("Link deleted successfully");
+    } catch (error) {
+      console.error('Error deleting link:', error);
+      toast.error("Failed to delete link");
+    }
   };
 
   const handleEditLink = (link: Link) => {
@@ -73,30 +103,50 @@ const Links = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveLink = (linkData: Partial<Link>) => {
-    if (selectedLink) {
-      // Edit existing link
-      setLinks(links.map(link => 
-        link.id === selectedLink.id 
-          ? { ...link, ...linkData }
-          : link
-      ));
-      toast.success("Link updated successfully!");
-    } else {
-      // Add new link
-      const newLink: Link = {
-        id: Date.now().toString(),
-        title: linkData.title || "",
-        url: linkData.url || "",
-        platform: linkData.platform || "Other",
-        clicks: 0,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      setLinks([newLink, ...links]);
-      toast.success("Link created successfully!");
+  const handleSaveLink = async (linkData: Partial<Link>) => {
+    try {
+      if (selectedLink) {
+        // Edit existing link
+        const { error } = await supabase
+          .from('links')
+          .update({
+            title: linkData.title,
+            url: linkData.url,
+            platform: linkData.platform,
+          })
+          .eq('id', selectedLink.id);
+
+        if (error) throw error;
+        toast.success("Link updated successfully!");
+      } else {
+        // Add new link
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        // Generate a short code
+        const shortCode = Math.random().toString(36).substring(2, 8);
+
+        const { error } = await supabase
+          .from('links')
+          .insert({
+            title: linkData.title,
+            url: linkData.url,
+            platform: linkData.platform,
+            short_code: shortCode,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+        toast.success("Link created successfully!");
+      }
+
+      await fetchLinks();
+      setIsAddModalOpen(false);
+      setSelectedLink(null);
+    } catch (error) {
+      console.error('Error saving link:', error);
+      toast.error("Failed to save link");
     }
-    setIsAddModalOpen(false);
-    setSelectedLink(null);
   };
 
 
@@ -145,7 +195,11 @@ const Links = () => {
 
         {/* Main Content */}
         <main className="flex-1 p-6 overflow-auto">
-          {filteredLinks.length === 0 && searchQuery === "" ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full min-h-[400px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredLinks.length === 0 && searchQuery === "" ? (
             // Empty State
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] animate-scale-in">
               <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mb-6 animate-float">
