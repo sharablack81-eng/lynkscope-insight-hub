@@ -26,6 +26,16 @@ const accentColors = [
 
 const App = () => {
   useEffect(() => {
+    // Apply saved theme
+    const savedTheme = localStorage.getItem('darkMode');
+    const isDark = savedTheme === null ? true : savedTheme === 'true';
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // Apply saved accent color
     const savedColor = localStorage.getItem('accentColor');
     if (savedColor) {
       const colorData = accentColors.find(c => c.value === savedColor);

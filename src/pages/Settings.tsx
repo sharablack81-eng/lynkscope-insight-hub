@@ -53,7 +53,15 @@ const Settings = () => {
   useEffect(() => {
     fetchUserData();
     loadAccentColor();
+    loadThemePreference();
   }, []);
+
+  const loadThemePreference = () => {
+    const savedTheme = localStorage.getItem('darkMode');
+    const isDark = savedTheme === null ? true : savedTheme === 'true';
+    setDarkMode(isDark);
+    applyTheme(isDark);
+  };
 
   const loadAccentColor = () => {
     const savedColor = localStorage.getItem('accentColor');
@@ -61,6 +69,23 @@ const Settings = () => {
       setAccentColor(savedColor);
       applyAccentColor(savedColor);
     }
+  };
+
+  const applyTheme = (isDark: boolean) => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const handleDarkModeToggle = (checked: boolean) => {
+    setDarkMode(checked);
+    applyTheme(checked);
+    localStorage.setItem('darkMode', checked.toString());
+    toast.success(`${checked ? 'Dark' : 'Light'} mode enabled!`, {
+      description: "Your theme preference has been saved.",
+    });
   };
 
   const applyAccentColor = (hexColor: string) => {
@@ -237,7 +262,7 @@ const Settings = () => {
                     <Label>Dark Mode</Label>
                     <p className="text-sm text-muted-foreground">Use dark theme across the app</p>
                   </div>
-                  <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+                  <Switch checked={darkMode} onCheckedChange={handleDarkModeToggle} />
                 </div>
 
                 <Separator />

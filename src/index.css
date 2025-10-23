@@ -8,6 +8,54 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* LynkScope Light Theme */
+    --background: 0 0% 100%;
+    --foreground: 220 13% 9%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 220 13% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 9%;
+
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 220 13% 9%;
+
+    --muted: 220 13% 96%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 258 90% 66%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 85%;
+    --input: 220 13% 96%;
+    --ring: 258 90% 66%;
+
+    --radius: 0.75rem;
+
+    /* Gradient & Glow Effects */
+    --gradient-purple: linear-gradient(135deg, hsl(258, 90%, 66%) 0%, hsl(280, 85%, 55%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(0, 0%, 98%) 100%);
+    --glow-purple: 0 0 20px hsl(258, 90%, 66% / 0.5);
+    --glow-purple-strong: 0 0 40px hsl(258, 90%, 66% / 0.7);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 13% 9%;
+    --sidebar-primary: 258 90% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 13% 95%;
+    --sidebar-accent-foreground: 220 13% 9%;
+    --sidebar-border: 220 13% 85%;
+    --sidebar-ring: 258 90% 66%;
+  }
+
+  .dark {
     /* LynkScope Dark Theme */
     --background: 220 13% 9%;
     --foreground: 0 0% 92%;
@@ -36,8 +84,6 @@ All colors MUST be HSL.
     --border: 220 13% 20%;
     --input: 220 13% 18%;
     --ring: 258 90% 66%;
-
-    --radius: 0.75rem;
 
     /* Gradient & Glow Effects */
     --gradient-purple: linear-gradient(135deg, hsl(258, 90%, 66%) 0%, hsl(280, 85%, 55%) 100%);
