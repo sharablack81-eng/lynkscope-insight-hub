@@ -44,15 +44,45 @@ const Settings = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const accentColors = [
-    { name: "Purple", value: "#8B5CF6" },
-    { name: "Blue", value: "#3B82F6" },
-    { name: "Cyan", value: "#06B6D4" },
-    { name: "Pink", value: "#EC4899" },
+    { name: "Purple", value: "#8B5CF6", hsl: "258 90% 66%" },
+    { name: "Blue", value: "#3B82F6", hsl: "217 91% 60%" },
+    { name: "Cyan", value: "#06B6D4", hsl: "188 94% 43%" },
+    { name: "Pink", value: "#EC4899", hsl: "330 81% 60%" },
   ];
 
   useEffect(() => {
     fetchUserData();
+    loadAccentColor();
   }, []);
+
+  const loadAccentColor = () => {
+    const savedColor = localStorage.getItem('accentColor');
+    if (savedColor) {
+      setAccentColor(savedColor);
+      applyAccentColor(savedColor);
+    }
+  };
+
+  const applyAccentColor = (hexColor: string) => {
+    const colorData = accentColors.find(c => c.value === hexColor);
+    if (colorData) {
+      const root = document.documentElement;
+      root.style.setProperty('--primary', colorData.hsl);
+      root.style.setProperty('--accent', colorData.hsl);
+      root.style.setProperty('--ring', colorData.hsl);
+      root.style.setProperty('--sidebar-primary', colorData.hsl);
+      root.style.setProperty('--sidebar-ring', colorData.hsl);
+    }
+  };
+
+  const handleAccentColorChange = (color: string) => {
+    setAccentColor(color);
+    applyAccentColor(color);
+    localStorage.setItem('accentColor', color);
+    toast.success("Accent color updated!", {
+      description: "Your color preference has been saved.",
+    });
+  };
 
   const fetchUserData = async () => {
     try {
@@ -219,7 +249,7 @@ const Settings = () => {
                     {accentColors.map((color) => (
                       <button
                         key={color.value}
-                        onClick={() => setAccentColor(color.value)}
+                        onClick={() => handleAccentColorChange(color.value)}
                         className={`w-12 h-12 rounded-lg transition-all hover:scale-110 ${
                           accentColor === color.value ? "ring-2 ring-white ring-offset-2 ring-offset-background scale-110" : ""
                         }`}

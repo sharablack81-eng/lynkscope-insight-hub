@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,7 +17,30 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const accentColors = [
+  { name: "Purple", value: "#8B5CF6", hsl: "258 90% 66%" },
+  { name: "Blue", value: "#3B82F6", hsl: "217 91% 60%" },
+  { name: "Cyan", value: "#06B6D4", hsl: "188 94% 43%" },
+  { name: "Pink", value: "#EC4899", hsl: "330 81% 60%" },
+];
+
+const App = () => {
+  useEffect(() => {
+    const savedColor = localStorage.getItem('accentColor');
+    if (savedColor) {
+      const colorData = accentColors.find(c => c.value === savedColor);
+      if (colorData) {
+        const root = document.documentElement;
+        root.style.setProperty('--primary', colorData.hsl);
+        root.style.setProperty('--accent', colorData.hsl);
+        root.style.setProperty('--ring', colorData.hsl);
+        root.style.setProperty('--sidebar-primary', colorData.hsl);
+        root.style.setProperty('--sidebar-ring', colorData.hsl);
+      }
+    }
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -37,6 +61,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
