@@ -54,6 +54,7 @@ const Settings = () => {
     fetchUserData();
     loadAccentColor();
     loadThemePreference();
+    loadAnimationPreference();
   }, []);
 
   const loadThemePreference = () => {
@@ -71,11 +72,26 @@ const Settings = () => {
     }
   };
 
+  const loadAnimationPreference = () => {
+    const savedAnimation = localStorage.getItem('backgroundAnimation');
+    const isEnabled = savedAnimation === null ? true : savedAnimation === 'true';
+    setBackgroundAnimation(isEnabled);
+    applyAnimationPreference(isEnabled);
+  };
+
   const applyTheme = (isDark: boolean) => {
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const applyAnimationPreference = (enabled: boolean) => {
+    if (enabled) {
+      document.documentElement.classList.remove('no-animations');
+    } else {
+      document.documentElement.classList.add('no-animations');
     }
   };
 
@@ -85,6 +101,15 @@ const Settings = () => {
     localStorage.setItem('darkMode', checked.toString());
     toast.success(`${checked ? 'Dark' : 'Light'} mode enabled!`, {
       description: "Your theme preference has been saved.",
+    });
+  };
+
+  const handleAnimationToggle = (checked: boolean) => {
+    setBackgroundAnimation(checked);
+    applyAnimationPreference(checked);
+    localStorage.setItem('backgroundAnimation', checked.toString());
+    toast.success(`Animations ${checked ? 'enabled' : 'disabled'}!`, {
+      description: "Your animation preference has been saved.",
     });
   };
 
@@ -291,9 +316,9 @@ const Settings = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Background Animation</Label>
-                    <p className="text-sm text-muted-foreground">Enable floating particles effect</p>
+                    <p className="text-sm text-muted-foreground">Enable all animations and effects</p>
                   </div>
-                  <Switch checked={backgroundAnimation} onCheckedChange={setBackgroundAnimation} />
+                  <Switch checked={backgroundAnimation} onCheckedChange={handleAnimationToggle} />
                 </div>
               </div>
             </Card>

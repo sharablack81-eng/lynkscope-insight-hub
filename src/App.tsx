@@ -35,6 +35,15 @@ const App = () => {
       document.documentElement.classList.remove('dark');
     }
 
+    // Apply saved animation preference
+    const savedAnimation = localStorage.getItem('backgroundAnimation');
+    const isEnabled = savedAnimation === null ? true : savedAnimation === 'true';
+    if (isEnabled) {
+      document.documentElement.classList.remove('no-animations');
+    } else {
+      document.documentElement.classList.add('no-animations');
+    }
+
     // Apply saved accent color
     const savedColor = localStorage.getItem('accentColor');
     if (savedColor) {
