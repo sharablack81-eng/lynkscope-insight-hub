@@ -38,6 +38,9 @@ const Settings = () => {
   const [backgroundAnimation, setBackgroundAnimation] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const accentColors = [
     { name: "Purple", value: "#8B5CF6", hsl: "258 90% 66%" },
@@ -171,6 +174,46 @@ const Settings = () => {
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error("Failed to save profile");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      // Validation
+      if (!newPassword || !confirmPassword) {
+        toast.error("Please fill in all password fields");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        toast.error("Password must be at least 6 characters long");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        toast.error("New passwords do not match");
+        return;
+      }
+
+      // Update password in Supabase
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      // Clear form and close modal
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowPasswordModal(false);
+
+      toast.success("Password updated successfully!", {
+        description: "Your new password is now active.",
+      });
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast.error(error.message || "Failed to update password");
     }
   };
 
@@ -394,28 +437,39 @@ const Settings = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <Input id="currentPassword" type="password" className="bg-input border-border" />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>
-              <Input id="newPassword" type="password" className="bg-input border-border" />
+              <Input 
+                id="newPassword" 
+                type="password" 
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 6 characters)"
+                className="bg-input border-border" 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input id="confirmPassword" type="password" className="bg-input border-border" />
+              <Input 
+                id="confirmPassword" 
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="bg-input border-border" 
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowPasswordModal(false);
+              setNewPassword("");
+              setConfirmPassword("");
+            }}>
               Cancel
             </Button>
             <Button
               className="gradient-purple glow-purple hover:glow-purple-strong"
-              onClick={() => {
-                setShowPasswordModal(false);
-                toast.success("Password updated successfully!");
-              }}
+              onClick={handleChangePassword}
             >
               Update Password
             </Button>
