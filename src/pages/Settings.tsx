@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   User,
   Palette,
-  Bell,
   CreditCard,
   Shield,
   Upload,
@@ -37,9 +36,6 @@ const Settings = () => {
   const [darkMode, setDarkMode] = useState(true);
   const [accentColor, setAccentColor] = useState("#8B5CF6");
   const [backgroundAnimation, setBackgroundAnimation] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [analyticsNotifications, setAnalyticsNotifications] = useState(false);
-  const [productUpdates, setProductUpdates] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -176,12 +172,6 @@ const Settings = () => {
       console.error('Error saving profile:', error);
       toast.error("Failed to save profile");
     }
-  };
-
-  const handleSavePreferences = () => {
-    toast.success("Preferences saved!", {
-      description: "Your notification settings have been updated.",
-    });
   };
 
   return (
@@ -323,57 +313,6 @@ const Settings = () => {
               </div>
             </Card>
 
-            {/* Notifications */}
-            <Card className="glass-card p-6 animate-scale-in" style={{ animationDelay: "200ms" }}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">Notifications</h2>
-                  <p className="text-sm text-muted-foreground">Manage your notification preferences</p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Email me when a link reaches 100 clicks</Label>
-                    <p className="text-sm text-muted-foreground">Get notified about milestones</p>
-                  </div>
-                  <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Notify me of new analytics reports</Label>
-                    <p className="text-sm text-muted-foreground">Weekly summary emails</p>
-                  </div>
-                  <Switch checked={analyticsNotifications} onCheckedChange={setAnalyticsNotifications} />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Product updates & announcements</Label>
-                    <p className="text-sm text-muted-foreground">Stay informed about new features</p>
-                  </div>
-                  <Switch checked={productUpdates} onCheckedChange={setProductUpdates} />
-                </div>
-
-                <Button
-                  onClick={handleSavePreferences}
-                  className="w-full gradient-purple glow-purple hover:glow-purple-strong hover:scale-105 transition-all"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Save Preferences
-                </Button>
-              </div>
-            </Card>
-
             {/* Plan & Billing */}
             <Card className="glass-card p-6 animate-scale-in" style={{ animationDelay: "300ms" }}>
               <div className="flex items-center gap-3 mb-6">
@@ -426,14 +365,6 @@ const Settings = () => {
                   className="w-full justify-start hover:border-primary hover:bg-primary/10 transition-all"
                 >
                   Change Password
-                </Button>
-
-                <Button
-                  variant="outline"
-                  disabled
-                  className="w-full justify-start opacity-50 cursor-not-allowed"
-                >
-                  Enable 2FA (Coming Soon)
                 </Button>
 
                 <Separator />
