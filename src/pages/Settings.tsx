@@ -41,6 +41,8 @@ const Settings = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const accentColors = [
     { name: "Purple", value: "#8B5CF6", hsl: "258 90% 66%" },
@@ -141,12 +143,13 @@ const Settings = () => {
         
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('display_name')
+          .select('display_name, avatar_url')
           .eq('id', user.id)
           .single();
 
         if (error) throw error;
         setDisplayName(profile?.display_name || "user");
+        setAvatarUrl(profile?.avatar_url || null);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -174,6 +177,72 @@ const Settings = () => {
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error("Failed to save profile");
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please select an image file");
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
+
+      setUploadingAvatar(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      // Delete old avatar if exists
+      if (avatarUrl) {
+        const oldPath = avatarUrl.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('avatars')
+            .remove([`${user.id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new avatar
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(publicUrl);
+      toast.success("Avatar updated successfully!");
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error(error.message || "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -256,13 +325,33 @@ const Settings = () => {
               <div className="space-y-4">
                 {/* Profile Image */}
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center hover:scale-110 hover:rotate-6 transition-all duration-300 cursor-pointer">
-                    <User className="w-10 h-10 text-primary" />
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center hover:scale-110 hover:rotate-6 transition-all duration-300 cursor-pointer overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-10 h-10 text-primary" />
+                    )}
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Upload className="w-4 h-4" />
-                    Upload Avatar
-                  </Button>
+                  <div>
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      disabled={uploadingAvatar}
+                    >
+                      <Upload className="w-4 h-4" />
+                      {uploadingAvatar ? "Uploading..." : "Upload Avatar"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">Max 5MB, JPG/PNG</p>
+                  </div>
                 </div>
 
                 <Separator />
