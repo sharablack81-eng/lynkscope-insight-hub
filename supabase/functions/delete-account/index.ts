@@ -25,13 +25,14 @@ Deno.serve(async (req) => {
     }
 
     // Create a Supabase client with the user's token
-    const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     
     // Client with user token for verification
     const supabaseClient = createClient(
       supabaseUrl,
-      Deno.env.get('VITE_SUPABASE_PUBLISHABLE_KEY')!,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } }
     )
 
