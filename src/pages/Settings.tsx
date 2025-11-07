@@ -297,24 +297,11 @@ const Settings = () => {
 
       setDeletingAccount(true);
 
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("No active session");
-        return;
-      }
-
       // Call the edge function to delete account
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const { data, error } = await supabase.functions.invoke('delete-account');
 
-      if (!response.ok) {
-        throw new Error('Failed to delete account');
+      if (error) {
+        throw error;
       }
 
       // Sign out and redirect
