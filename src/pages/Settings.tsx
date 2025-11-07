@@ -43,6 +43,8 @@ const Settings = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const accentColors = [
     { name: "Purple", value: "#8B5CF6", hsl: "258 90% 66%" },
@@ -283,6 +285,47 @@ const Settings = () => {
     } catch (error: any) {
       console.error('Error changing password:', error);
       toast.error(error.message || "Failed to update password");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      if (deleteConfirmation !== "DELETE") {
+        toast.error("Please type DELETE to confirm");
+        return;
+      }
+
+      setDeletingAccount(true);
+
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("No active session");
+        return;
+      }
+
+      // Call the edge function to delete account
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete account');
+      }
+
+      // Sign out and redirect
+      await supabase.auth.signOut();
+      navigate('/');
+      
+      toast.success("Account deleted successfully");
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast.error(error.message || "Failed to delete account");
+      setDeletingAccount(false);
     }
   };
 
@@ -582,21 +625,31 @@ const Settings = () => {
             <p className="text-sm text-muted-foreground">
               Type <span className="font-bold text-foreground">DELETE</span> to confirm:
             </p>
-            <Input placeholder="DELETE" className="mt-2 bg-input border-border" />
+            <Input 
+              placeholder="DELETE" 
+              className="mt-2 bg-input border-border"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteConfirmation("");
+              }}
+              disabled={deletingAccount}
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               className="hover:scale-105 transition-all"
-              onClick={() => {
-                setShowDeleteModal(false);
-                toast.error("Account deletion cancelled");
-              }}
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount || deleteConfirmation !== "DELETE"}
             >
-              Delete Account
+              {deletingAccount ? "Deleting..." : "Delete Account"}
             </Button>
           </DialogFooter>
         </DialogContent>
