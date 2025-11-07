@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
@@ -11,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState([
     {
       label: "Total Clicks",
@@ -243,8 +245,11 @@ const Dashboard = () => {
                         Priority Support
                       </span>
                     </div>
-                    <Button className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105">
-                      Upgrade Now
+                    <Button 
+                      onClick={() => navigate("/premium")}
+                      className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105"
+                    >
+                      Upgrade to Pro
                     </Button>
                   </div>
                 </div>
