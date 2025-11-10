@@ -20,8 +20,18 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [hasProAccess, setHasProAccess] = useState(() => {
+    return localStorage.getItem('hasProAccess') === 'true';
+  });
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleUpgradeToPro = () => {
+    localStorage.setItem('hasProAccess', 'true');
+    setHasProAccess(true);
+    navigate('/premium');
+    toast.success("Welcome to LynkScope Pro!");
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -33,13 +43,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     }
   };
 
-  const menuItems = [
+  const baseMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: LinkIcon, label: "Links", path: "/links" },
     { icon: BarChart3, label: "Analytics", path: "/analytics" },
-    { icon: Settings, label: "Settings", path: "/settings" },
-    { icon: Crown, label: "Pro", path: "/premium" }
+    { icon: Settings, label: "Settings", path: "/settings" }
   ];
+
+  const menuItems = hasProAccess 
+    ? [...baseMenuItems, { icon: Crown, label: "Pro", path: "/premium" }]
+    : baseMenuItems;
 
   return (
     <div className="min-h-screen flex">
@@ -105,10 +118,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
           
-          <Button className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105">
-            <Crown className="w-4 h-4 mr-2" />
-            Upgrade to Pro
-          </Button>
+          {!hasProAccess && (
+            <Button 
+              onClick={handleUpgradeToPro}
+              className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Upgrade to Pro
+            </Button>
+          )}
         </header>
 
         {children}
