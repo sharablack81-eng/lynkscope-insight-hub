@@ -37,7 +37,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: LinkIcon, label: "Links", path: "/links" },
     { icon: BarChart3, label: "Analytics", path: "/analytics" },
-    { icon: Settings, label: "Settings", path: "/settings" }
+    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: Crown, label: "Pro", path: "/premium" }
   ];
 
   return (
