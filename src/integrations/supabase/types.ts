@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       link_clicks: {
         Row: {
+          browser: string | null
           clicked_at: string
+          device_type: string | null
           id: string
           ip_address: string | null
           link_id: string
@@ -24,7 +26,9 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          browser?: string | null
           clicked_at?: string
+          device_type?: string | null
           id?: string
           ip_address?: string | null
           link_id: string
@@ -32,7 +36,9 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          browser?: string | null
           clicked_at?: string
+          device_type?: string | null
           id?: string
           ip_address?: string | null
           link_id?: string
