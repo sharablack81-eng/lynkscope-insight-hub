@@ -12,6 +12,7 @@ const continentPositions: Record<string, { left: string; top: string }> = {
   'Asia': { left: '70%', top: '32%' },
   'Oceania': { left: '80%', top: '60%' },
   'Antarctica': { left: '50%', top: '85%' },
+  'Unknown': { left: '50%', top: '50%' }, // Center for testing/development
 };
 
 export const WorldMap = ({ data }: WorldMapProps) => {

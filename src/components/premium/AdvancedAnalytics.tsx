@@ -53,9 +53,7 @@ const AdvancedAnalytics = () => {
     
     const continents = clicksData.clicks.reduce((acc: Record<string, number>, click: any) => {
       const continent = click.continent || 'Unknown';
-      if (continent !== 'Unknown') {
-        acc[continent] = (acc[continent] || 0) + 1;
-      }
+      acc[continent] = (acc[continent] || 0) + 1;
       return acc;
     }, {});
 
