@@ -28,6 +28,29 @@ const parseUserAgent = (userAgent: string | null): { browser: string; deviceType
   return { browser, deviceType };
 };
 
+// Get location from IP address using ip-api.com (free service)
+const getLocationFromIP = async (ip: string | null): Promise<{ country: string; continent: string }> => {
+  if (!ip || ip === '::1' || ip === '127.0.0.1') {
+    return { country: 'Unknown', continent: 'Unknown' };
+  }
+
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}`);
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      return {
+        country: data.country || 'Unknown',
+        continent: data.continent || 'Unknown'
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching location:', error);
+  }
+  
+  return { country: 'Unknown', continent: 'Unknown' };
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -59,6 +82,10 @@ serve(async (req) => {
     const userAgent = req.headers.get('user-agent');
     const { browser, deviceType } = parseUserAgent(userAgent);
 
+    // Get IP address and location
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
+    const { country, continent } = await getLocationFromIP(ipAddress);
+
     // Track the click
     const { error: clickError } = await supabaseClient
       .from('link_clicks')
@@ -66,9 +93,11 @@ serve(async (req) => {
         link_id: link.id,
         referrer: req.headers.get('referer'),
         user_agent: userAgent,
-        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip'),
+        ip_address: ipAddress,
         browser,
         device_type: deviceType,
+        country,
+        continent,
       });
 
     if (clickError) {

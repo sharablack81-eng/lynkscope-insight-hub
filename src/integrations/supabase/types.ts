@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           browser: string | null
           clicked_at: string
+          continent: string | null
+          country: string | null
           device_type: string | null
           id: string
           ip_address: string | null
@@ -28,6 +30,8 @@ export type Database = {
         Insert: {
           browser?: string | null
           clicked_at?: string
+          continent?: string | null
+          country?: string | null
           device_type?: string | null
           id?: string
           ip_address?: string | null
@@ -38,6 +42,8 @@ export type Database = {
         Update: {
           browser?: string | null
           clicked_at?: string
+          continent?: string | null
+          country?: string | null
           device_type?: string | null
           id?: string
           ip_address?: string | null

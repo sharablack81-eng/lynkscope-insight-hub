@@ -7,6 +7,7 @@ import { Activity, Users, Globe, Smartphone, Monitor, TabletSmartphone } from "l
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { WorldMap } from "./WorldMap";
 
 const AdvancedAnalytics = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -21,7 +22,7 @@ const AdvancedAnalytics = () => {
       
       const { data: clicks } = await supabase
         .from('link_clicks')
-        .select('link_id, browser, device_type, clicked_at');
+        .select('link_id, browser, device_type, clicked_at, continent, country');
       
       return { links: links || [], clicks: clicks || [] };
     },
@@ -46,9 +47,22 @@ const AdvancedAnalytics = () => {
     })()
   };
 
-  const geoData = [
-    { country: "Geographic data coming soon", clicks: 0 }
-  ];
+  // Process geographic data by continent
+  const geoData = (() => {
+    if (!clicksData?.clicks.length) return [];
+    
+    const continents = clicksData.clicks.reduce((acc: Record<string, number>, click: any) => {
+      const continent = click.continent || 'Unknown';
+      if (continent !== 'Unknown') {
+        acc[continent] = (acc[continent] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    return Object.entries(continents)
+      .map(([continent, clicks]) => ({ continent, clicks: clicks as number }))
+      .sort((a, b) => b.clicks - a.clicks);
+  })();
 
   // Process device data
   const deviceData = (() => {
@@ -153,45 +167,27 @@ const AdvancedAnalytics = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Map Placeholder */}
-              <div className="relative h-64 bg-gradient-to-br from-card to-muted rounded-xl overflow-hidden border border-primary/20">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Globe className="w-16 h-16 text-primary/30" />
+            {geoData.length > 0 ? (
+              <div className="space-y-4">
+                <WorldMap data={geoData} />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                  {geoData.map((item) => (
+                    <div key={item.continent} className="flex justify-between items-center p-3 bg-card/50 rounded-lg hover:bg-card transition-colors">
+                      <span className="text-sm font-medium">{item.continent}</span>
+                      <span className="text-sm text-primary font-semibold">{item.clicks}</span>
+                    </div>
+                  ))}
                 </div>
-                {/* Simulated location dots */}
-                {geoData.map((location, i) => (
-                  <motion.div
-                    key={location.country}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2 + i * 0.1 }}
-                    className="absolute w-3 h-3 rounded-full bg-primary glow-purple-strong cursor-pointer hover:scale-150 transition-transform"
-                    style={{
-                      left: `${20 + i * 15}%`,
-                      top: `${30 + (i % 3) * 20}%`,
-                    }}
-                    title={`${location.country}: ${location.clicks} clicks`}
-                  />
-                ))}
               </div>
-
-              {/* Location List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {geoData.map((location, i) => (
-                  <motion.div
-                    key={location.country}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + i * 0.05 }}
-                    className="flex items-center justify-between p-3 rounded-lg bg-card/50 hover:bg-card transition-colors"
-                  >
-                    <span className="font-medium">{location.country}</span>
-                    <span className="text-primary font-semibold">{location.clicks} clicks</span>
-                  </motion.div>
-                ))}
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                <div className="text-center space-y-2">
+                  <Globe className="w-12 h-12 text-primary/30 mx-auto" />
+                  <p>No geographic data yet.</p>
+                  <p className="text-sm">Clicks will be tracked automatically.</p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
