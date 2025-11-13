@@ -33,16 +33,37 @@ const getLocationFromIP = async (ip: string | null): Promise<{ country: string; 
   if (!ip || ip === '::1' || ip === '127.0.0.1') {
     return { country: 'Unknown', continent: 'Unknown' };
   }
+  
+  // Extract the real public IP from comma-separated list (handles proxy forwarding)
+  // The x-forwarded-for header often contains: "client, proxy1, proxy2"
+  // We want the first public IP in the chain
+  const publicIP = ip.split(',').map(i => i.trim()).find(i => 
+    !i.startsWith('172.') && 
+    !i.startsWith('192.168.') && 
+    !i.startsWith('10.') &&
+    i !== '::1' &&
+    i !== '127.0.0.1'
+  );
 
+  if (!publicIP) {
+    console.log('No public IP found in:', ip);
+    return { country: 'Unknown', continent: 'Unknown' };
+  }
+  
   try {
-    const response = await fetch(`http://ip-api.com/json/${ip}`);
+    console.log('Fetching location for IP:', publicIP);
+    const response = await fetch(`http://ip-api.com/json/${publicIP}`);
     const data = await response.json();
+    
+    console.log('Location API response:', data);
     
     if (data.status === 'success') {
       return {
         country: data.country || 'Unknown',
         continent: data.continent || 'Unknown'
       };
+    } else {
+      console.log('Location API failed:', data.message);
     }
   } catch (error) {
     console.error('Error fetching location:', error);

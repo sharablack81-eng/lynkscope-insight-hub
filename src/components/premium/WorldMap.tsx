@@ -26,62 +26,71 @@ export const WorldMap = ({ data }: WorldMapProps) => {
         className="w-full h-full"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Simplified continent outlines */}
+        {/* Grid lines for reference */}
+        <line x1="0" y1="250" x2="1000" y2="250" stroke="hsl(var(--border))" strokeWidth="0.5" opacity="0.2" />
+        <line x1="500" y1="0" x2="500" y2="500" stroke="hsl(var(--border))" strokeWidth="0.5" opacity="0.2" />
+        
         {/* North America */}
         <path
-          d="M150,150 L180,140 L210,145 L230,160 L240,180 L235,200 L220,220 L200,230 L180,235 L160,230 L145,215 L140,195 L145,175 Z"
+          d="M150,180 L160,160 L180,150 L200,145 L220,150 L240,160 L250,180 L255,200 L250,220 L240,240 L220,250 L200,255 L180,250 L160,240 L150,220 L145,200 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.7"
         />
+        
         {/* South America */}
         <path
-          d="M250,290 L265,280 L280,285 L285,305 L280,330 L270,350 L255,360 L245,355 L240,335 L242,315 Z"
+          d="M250,280 L260,270 L275,275 L285,290 L288,310 L285,330 L275,345 L260,355 L245,350 L235,335 L233,315 L238,295 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.7"
         />
+        
         {/* Europe */}
         <path
-          d="M480,120 L510,115 L525,125 L520,145 L505,155 L485,150 L475,135 Z"
+          d="M480,140 L495,135 L515,138 L530,145 L535,160 L530,175 L515,185 L495,180 L480,170 L475,155 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.7"
         />
+        
         {/* Africa */}
         <path
-          d="M500,220 L530,215 L545,230 L545,270 L535,295 L515,300 L495,290 L490,260 L495,235 Z"
+          d="M495,200 L510,195 L530,200 L545,220 L548,250 L545,280 L535,300 L515,310 L495,305 L485,285 L482,255 L485,225 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.7"
         />
+        
         {/* Asia */}
         <path
-          d="M550,130 L650,120 L720,140 L730,170 L720,195 L680,205 L640,200 L600,190 L565,175 L545,155 Z"
+          d="M550,140 L590,130 L640,135 L690,145 L730,160 L750,180 L745,205 L720,215 L680,220 L640,215 L600,205 L565,190 L545,170 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.7"
         />
-        {/* Oceania */}
+        
+        {/* Oceania/Australia */}
         <path
-          d="M780,290 L810,285 L825,295 L820,315 L800,320 L785,310 Z"
+          d="M780,280 L800,275 L820,280 L835,290 L838,305 L830,320 L810,325 L790,320 L775,305 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.7"
         />
+        
         {/* Antarctica */}
         <path
-          d="M300,420 L700,420 L700,450 L300,450 Z"
+          d="M200,430 L800,430 L800,460 L200,460 Z"
           fill="hsl(var(--muted))"
-          stroke="hsl(var(--border))"
-          strokeWidth="1"
-          opacity="0.6"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.5"
         />
       </svg>
 
