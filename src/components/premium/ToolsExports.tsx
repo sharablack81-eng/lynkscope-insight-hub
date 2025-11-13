@@ -10,10 +10,12 @@ import { useQuery } from "@tanstack/react-query";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, subDays } from "date-fns";
+import QRCodeLib from "qrcode";
 
 const ToolsExports = () => {
   const [selectedLink, setSelectedLink] = useState<string>("");
   const [qrGenerated, setQrGenerated] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const [exportDateRange, setExportDateRange] = useState("30");
 
   // Fetch real links from database
@@ -30,12 +32,48 @@ const ToolsExports = () => {
     },
   });
 
-  const generateQR = () => {
-    setQrGenerated(true);
-    toast.success("QR Code generated successfully!");
+  const generateQR = async () => {
+    if (!selectedLink) return;
+    
+    try {
+      const link = links.find(l => l.id === selectedLink);
+      if (!link) return;
+
+      const shortUrl = `${window.location.origin}/${link.short_code}`;
+      
+      // Generate QR code as data URL
+      const qrDataUrl = await QRCodeLib.toDataURL(shortUrl, {
+        width: 512,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      setQrCodeDataUrl(qrDataUrl);
+      setQrGenerated(true);
+      toast.success("QR Code generated successfully!");
+    } catch (error) {
+      console.error("Error generating QR code:", error);
+      toast.error("Failed to generate QR code");
+    }
   };
 
   const downloadQR = () => {
+    if (!qrCodeDataUrl) return;
+    
+    const link = links.find(l => l.id === selectedLink);
+    if (!link) return;
+
+    // Create download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = qrCodeDataUrl;
+    downloadLink.download = `qr-${link.short_code}.png`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    
     toast.success("QR Code downloaded as PNG!");
   };
 
@@ -343,16 +381,12 @@ const ToolsExports = () => {
                 <div className="flex flex-col items-center space-y-4">
                   {/* QR Code Preview */}
                   <div className="relative">
-                    <div className="w-64 h-64 bg-white rounded-xl flex items-center justify-center overflow-hidden">
-                      {/* Simulated QR Code */}
-                      <div className="grid grid-cols-8 gap-1 p-4">
-                        {Array.from({ length: 64 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-6 h-6 ${Math.random() > 0.5 ? 'bg-black' : 'bg-white'}`}
-                          />
-                        ))}
-                      </div>
+                    <div className="w-64 h-64 bg-white rounded-xl flex items-center justify-center overflow-hidden p-4">
+                      <img 
+                        src={qrCodeDataUrl} 
+                        alt="QR Code" 
+                        className="w-full h-full object-contain"
+                      />
                     </div>
                     {/* Glowing ring effect */}
                     <motion.div
