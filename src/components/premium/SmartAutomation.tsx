@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,36 +6,132 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { TestTube, Clock, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import CreateABTestDialog from "./CreateABTestDialog";
 
 const SmartAutomation = () => {
-  const [abTests, setAbTests] = useState([
-    {
-      id: 1,
-      name: "Summer Sale Campaign",
-      linkA: "summer-sale-v1",
-      linkB: "summer-sale-v2",
-      status: "active",
-      clicksA: 456,
-      clicksB: 523,
-      ctrA: 3.2,
-      ctrB: 3.8,
-      conversionA: 2.1,
-      conversionB: 2.7,
-    },
-    {
-      id: 2,
-      name: "Product Launch",
-      linkA: "launch-promo-a",
-      linkB: "launch-promo-b",
-      status: "ended",
-      clicksA: 1234,
-      clicksB: 1189,
-      ctrA: 4.5,
-      ctrB: 4.2,
-      conversionA: 3.8,
-      conversionB: 3.4,
-    },
-  ]);
+  const [abTests, setAbTests] = useState<any[]>([]);
+  const [links, setLinks] = useState<any[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchABTests = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: testsData, error: testsError } = await supabase
+        .from("ab_tests")
+        .select(`
+          *,
+          variant_a:links!variant_a_id(*),
+          variant_b:links!variant_b_id(*)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (testsError) throw testsError;
+
+      // Fetch click data for each test
+      const enrichedTests = await Promise.all(
+        (testsData || []).map(async (test) => {
+          const { data: clicksA } = await supabase
+            .from("link_clicks")
+            .select("*")
+            .eq("link_id", test.variant_a_id);
+
+          const { data: clicksB } = await supabase
+            .from("link_clicks")
+            .select("*")
+            .eq("link_id", test.variant_b_id);
+
+          const clicksACount = clicksA?.length || 0;
+          const clicksBCount = clicksB?.length || 0;
+          const totalClicks = clicksACount + clicksBCount;
+
+          const conversionsA = clicksA?.filter(c => c.converted).length || 0;
+          const conversionsB = clicksB?.filter(c => c.converted).length || 0;
+
+          const ctrA = totalClicks > 0 ? (clicksACount / totalClicks) * 100 : 0;
+          const ctrB = totalClicks > 0 ? (clicksBCount / totalClicks) * 100 : 0;
+
+          const conversionRateA = clicksACount > 0 ? (conversionsA / clicksACount) * 100 : 0;
+          const conversionRateB = clicksBCount > 0 ? (conversionsB / clicksBCount) * 100 : 0;
+
+          return {
+            ...test,
+            clicksA: clicksACount,
+            clicksB: clicksBCount,
+            ctrA: Number(ctrA.toFixed(1)),
+            ctrB: Number(ctrB.toFixed(1)),
+            conversionA: Number(conversionRateA.toFixed(1)),
+            conversionB: Number(conversionRateB.toFixed(1)),
+          };
+        })
+      );
+
+      setAbTests(enrichedTests);
+    } catch (error: any) {
+      console.error("Error fetching A/B tests:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchLinks = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("links")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setLinks(data || []);
+    } catch (error: any) {
+      console.error("Error fetching links:", error);
+    }
+  };
+
+  const handleEndTest = async (testId: string, test: any) => {
+    try {
+      const winner = test.conversionB > test.conversionA ? "B" : "A";
+
+      const { error } = await supabase
+        .from("ab_tests")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          winner_variant: winner,
+        })
+        .eq("id", testId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Test ended",
+        description: `Variant ${winner} is the winner!`,
+      });
+
+      fetchABTests();
+    } catch (error: any) {
+      toast({
+        title: "Error ending test",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchABTests();
+    fetchLinks();
+  }, []);
 
   const [expiringLinks, setExpiringLinks] = useState([
     {
@@ -86,14 +182,26 @@ const SmartAutomation = () => {
                 <TestTube className="w-5 h-5 text-primary" />
                 A/B Testing
               </CardTitle>
-              <Button className="gradient-purple glow-purple hover:glow-purple-strong">
+              <Button 
+                className="gradient-purple glow-purple hover:glow-purple-strong"
+                onClick={() => setIsDialogOpen(true)}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 New Test
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {abTests.map((test, index) => {
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading tests...
+              </div>
+            ) : abTests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No A/B tests yet. Create your first test to get started!
+              </div>
+            ) : (
+              abTests.map((test, index) => {
               const winner = getWinner(test);
               return (
                 <motion.div
@@ -104,25 +212,36 @@ const SmartAutomation = () => {
                   className="premium-card p-6 rounded-xl"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-lg font-semibold mb-1">{test.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {test.linkA} vs {test.linkB}
+                        {test.variant_a?.short_code} vs {test.variant_b?.short_code}
                       </p>
                     </div>
-                    <Badge 
-                      variant={test.status === "active" ? "default" : "secondary"}
-                      className={test.status === "active" ? "bg-primary/20 text-primary border-primary/30" : ""}
-                    >
-                      {test.status === "active" ? "Active" : "Ended"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={test.status === "active" ? "default" : "secondary"}
+                        className={test.status === "active" ? "bg-primary/20 text-primary border-primary/30" : ""}
+                      >
+                        {test.status === "active" ? "Active" : "Ended"}
+                      </Badge>
+                      {test.status === "active" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEndTest(test.id, test)}
+                        >
+                          End Test
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Variant A */}
                     <div className={`p-4 rounded-lg bg-card/50 border ${winner === "A" ? "border-primary glow-purple" : "border-border"}`}>
                       <div className="flex items-center justify-between mb-3">
-                        <span className="font-medium">Variant A</span>
+                        <span className="font-medium">Variant A ({test.variant_a?.platform})</span>
                         {winner === "A" && (
                           <Badge className="bg-primary text-primary-foreground">Winner</Badge>
                         )}
@@ -149,7 +268,7 @@ const SmartAutomation = () => {
                     {/* Variant B */}
                     <div className={`p-4 rounded-lg bg-card/50 border ${winner === "B" ? "border-primary glow-purple" : "border-border"}`}>
                       <div className="flex items-center justify-between mb-3">
-                        <span className="font-medium">Variant B</span>
+                        <span className="font-medium">Variant B ({test.variant_b?.platform})</span>
                         {winner === "B" && (
                           <Badge className="bg-primary text-primary-foreground">Winner</Badge>
                         )}
@@ -175,7 +294,8 @@ const SmartAutomation = () => {
                   </div>
                 </motion.div>
               );
-            })}
+            })
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -247,6 +367,13 @@ const SmartAutomation = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      <CreateABTestDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        links={links}
+        onTestCreated={fetchABTests}
+      />
     </div>
   );
 };

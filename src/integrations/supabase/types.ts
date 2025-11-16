@@ -14,11 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_tests: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          name: string
+          status: string
+          user_id: string
+          variant_a_id: string
+          variant_b_id: string
+          winner_variant: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          name: string
+          status?: string
+          user_id: string
+          variant_a_id: string
+          variant_b_id: string
+          winner_variant?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          name?: string
+          status?: string
+          user_id?: string
+          variant_a_id?: string
+          variant_b_id?: string
+          winner_variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_tests_variant_a_id_fkey"
+            columns: ["variant_a_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_tests_variant_b_id_fkey"
+            columns: ["variant_b_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       link_clicks: {
         Row: {
           browser: string | null
           clicked_at: string
           continent: string | null
+          converted: boolean
           country: string | null
           device_type: string | null
           id: string
@@ -31,6 +83,7 @@ export type Database = {
           browser?: string | null
           clicked_at?: string
           continent?: string | null
+          converted?: boolean
           country?: string | null
           device_type?: string | null
           id?: string
@@ -43,6 +96,7 @@ export type Database = {
           browser?: string | null
           clicked_at?: string
           continent?: string | null
+          converted?: boolean
           country?: string | null
           device_type?: string | null
           id?: string
