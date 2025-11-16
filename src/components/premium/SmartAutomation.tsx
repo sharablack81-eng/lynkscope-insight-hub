@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { TestTube, Clock, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { TestTube, Clock, Plus, TrendingUp, TrendingDown, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateABTestDialog from "./CreateABTestDialog";
@@ -15,7 +15,27 @@ const SmartAutomation = () => {
   const [links, setLinks] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const copyToClipboard = async (shortCode: string) => {
+    const url = `${window.location.origin}/l/${shortCode}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(shortCode);
+      toast({
+        title: "Link copied!",
+        description: "The link has been copied to your clipboard",
+      });
+      setTimeout(() => setCopiedLink(null), 2000);
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the link manually",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchABTests = async () => {
     try {
@@ -263,6 +283,26 @@ const SmartAutomation = () => {
                           <span className="font-semibold">{test.conversionA}%</span>
                         </div>
                       </div>
+                      <div className="mt-4 pt-3 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 px-2 py-1.5 bg-muted rounded text-xs truncate">
+                            {window.location.origin}/l/{test.variant_a?.short_code}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => copyToClipboard(test.variant_a?.short_code)}
+                          >
+                            {copiedLink === test.variant_a?.short_code ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Variant B */}
@@ -288,6 +328,26 @@ const SmartAutomation = () => {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Conversion</span>
                           <span className="font-semibold">{test.conversionB}%</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 px-2 py-1.5 bg-muted rounded text-xs truncate">
+                            {window.location.origin}/l/{test.variant_b?.short_code}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => copyToClipboard(test.variant_b?.short_code)}
+                          >
+                            {copiedLink === test.variant_b?.short_code ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
                         </div>
                       </div>
                     </div>
