@@ -39,7 +39,7 @@ const ToolsExports = () => {
       const link = links.find(l => l.id === selectedLink);
       if (!link) return;
 
-      const shortUrl = `${window.location.origin}/${link.short_code}`;
+      const shortUrl = `${window.location.origin}/l/${link.short_code}`;
       
       // Generate QR code as data URL
       const qrDataUrl = await QRCodeLib.toDataURL(shortUrl, {
