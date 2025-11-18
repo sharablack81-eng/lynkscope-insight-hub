@@ -99,6 +99,49 @@ serve(async (req) => {
       );
     }
 
+    // Check if link has expiry settings
+    const { data: expireLink } = await supabaseClient
+      .from('expire_links')
+      .select('*')
+      .eq('link_id', link.id)
+      .single();
+
+    // If link has expiry settings, check if it's expired or inactive
+    if (expireLink) {
+      // Check if link is toggled off
+      if (!expireLink.is_active) {
+        return new Response(
+          JSON.stringify({ error: 'Link is inactive' }),
+          { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check time-based or day-based expiry
+      if ((expireLink.expire_type === 'time-based' || expireLink.expire_type === 'day-based') && expireLink.expires_at) {
+        if (new Date(expireLink.expires_at) < new Date()) {
+          return new Response(
+            JSON.stringify({ error: 'Link has expired' }),
+            { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // Check click-based expiry
+      if (expireLink.expire_type === 'click-based' && expireLink.max_clicks) {
+        const { count } = await supabaseClient
+          .from('link_clicks')
+          .select('*', { count: 'exact', head: true })
+          .eq('link_id', link.id);
+
+        if (count && count >= expireLink.max_clicks) {
+          return new Response(
+            JSON.stringify({ error: 'Link has reached maximum clicks' }),
+            { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     // Parse user agent
     const userAgent = req.headers.get('user-agent');
     const { browser, deviceType } = parseUserAgent(userAgent);
