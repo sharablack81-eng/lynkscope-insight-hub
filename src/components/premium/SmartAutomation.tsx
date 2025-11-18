@@ -9,11 +9,14 @@ import { TestTube, Clock, Plus, TrendingUp, TrendingDown, Copy, Check } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateABTestDialog from "./CreateABTestDialog";
+import CreateExpireLinkDialog from "./CreateExpireLinkDialog";
 
 const SmartAutomation = () => {
   const [abTests, setAbTests] = useState<any[]>([]);
   const [links, setLinks] = useState<any[]>([]);
+  const [expireLinks, setExpireLinks] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isExpireLinkDialogOpen, setIsExpireLinkDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
@@ -148,9 +151,103 @@ const SmartAutomation = () => {
     }
   };
 
+  const fetchExpireLinks = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: expireLinksData, error: expireLinksError } = await supabase
+        .from("expire_links")
+        .select(`
+          *,
+          link:links(*)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (expireLinksError) throw expireLinksError;
+
+      // Enrich with click data
+      const enrichedExpireLinks = await Promise.all(
+        (expireLinksData || []).map(async (expireLink) => {
+          const { data: clicks } = await supabase
+            .from("link_clicks")
+            .select("*")
+            .eq("link_id", expireLink.link_id);
+
+          const clickCount = clicks?.length || 0;
+          const conversions = clicks?.filter(c => c.converted).length || 0;
+          const conversionRate = clickCount > 0 ? (conversions / clickCount) * 100 : 0;
+
+          // Check if expired
+          let isExpired = false;
+          if (expireLink.expire_type === "time-based" || expireLink.expire_type === "day-based") {
+            isExpired = expireLink.expires_at && new Date(expireLink.expires_at) < new Date();
+          } else if (expireLink.expire_type === "click-based") {
+            isExpired = clickCount >= (expireLink.max_clicks || 0);
+          }
+
+          return {
+            ...expireLink,
+            clickCount,
+            conversions,
+            conversionRate: Number(conversionRate.toFixed(1)),
+            isExpired,
+          };
+        })
+      );
+
+      setExpireLinks(enrichedExpireLinks);
+    } catch (error: any) {
+      console.error("Error fetching expire links:", error);
+    }
+  };
+
+  const handleToggleExpireLink = async (id: string, currentActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("expire_links")
+        .update({ is_active: !currentActive })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Link ${!currentActive ? "activated" : "deactivated"}`,
+      });
+
+      fetchExpireLinks();
+    } catch (error: any) {
+      console.error("Error toggling expire link:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle link",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getTimeRemaining = (expiresAt: string) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diff = expiry.getTime() - now.getTime();
+
+    if (diff <= 0) return "Expired";
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
   useEffect(() => {
     fetchABTests();
     fetchLinks();
+    fetchExpireLinks();
   }, []);
 
   const [expiringLinks, setExpiringLinks] = useState([
@@ -368,62 +465,133 @@ const SmartAutomation = () => {
       >
         <Card className="premium-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Auto-Expire Links
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                Auto-Expire Links
+              </CardTitle>
+              <Button 
+                className="gradient-purple glow-purple hover:glow-purple-strong"
+                onClick={() => setIsExpireLinkDialogOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Expire Link
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {expiringLinks.map((link, index) => {
-              const progressValue = link.expireType === "clicks" 
-                ? (link.currentClicks! / link.maxClicks!) * 100 
-                : ((30 - link.daysLeft!) / 30) * 100;
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading expire links...
+              </div>
+            ) : expireLinks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No expire links yet. Create your first expire link to get started!
+              </div>
+            ) : (
+              expireLinks.map((expireLink, index) => {
+                const progressValue = expireLink.expire_type === "click-based" 
+                  ? (expireLink.clickCount / (expireLink.max_clicks || 1)) * 100 
+                  : expireLink.expires_at ? Math.max(0, 100 - ((new Date(expireLink.expires_at).getTime() - Date.now()) / (new Date(expireLink.expires_at).getTime() - new Date(expireLink.created_at).getTime())) * 100) : 0;
 
-              return (
-                <motion.div
-                  key={link.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + index * 0.05 }}
-                  className="premium-card p-5 rounded-xl"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-semibold">{link.name}</h3>
-                        <Switch
-                          checked={link.enabled}
-                          onCheckedChange={(checked) => {
-                            const updated = [...expiringLinks];
-                            updated[index].enabled = checked;
-                            setExpiringLinks(updated);
-                          }}
+                return (
+                  <motion.div
+                    key={expireLink.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                    className="premium-card p-5 rounded-xl"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="font-semibold">{expireLink.name}</h3>
+                          <Switch
+                            checked={expireLink.is_active && !expireLink.isExpired}
+                            disabled={expireLink.isExpired}
+                            onCheckedChange={() => handleToggleExpireLink(expireLink.id, expireLink.is_active)}
+                          />
+                        </div>
+                        <p className="text-sm text-muted-foreground">{expireLink.link?.url}</p>
+                      </div>
+                      <Badge 
+                        variant={expireLink.is_active && !expireLink.isExpired ? "default" : "secondary"}
+                        className={
+                          expireLink.expire_type === "click-based" 
+                            ? "bg-purple-500/20 text-purple-400 border-purple-500/30" 
+                            : expireLink.expire_type === "time-based"
+                            ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                            : "bg-green-500/20 text-green-400 border-green-500/30"
+                        }
+                      >
+                        {expireLink.expire_type === "click-based" ? "Click-based" : expireLink.expire_type === "time-based" ? "Time-based" : "Day-based"}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground block mb-1">Total Clicks</span>
+                          <span className="font-semibold">{expireLink.clickCount}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block mb-1">Conversions</span>
+                          <span className="font-semibold">{expireLink.conversions}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block mb-1">Conv. Rate</span>
+                          <span className="font-semibold">{expireLink.conversionRate}%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {expireLink.expire_type === "click-based" 
+                              ? `${expireLink.clickCount} / ${expireLink.max_clicks} clicks` 
+                              : expireLink.isExpired
+                              ? "Expired"
+                              : `${getTimeRemaining(expireLink.expires_at)} remaining`}
+                          </span>
+                          <span className="font-medium">{Math.round(Math.min(100, progressValue))}%</span>
+                        </div>
+                        <Progress 
+                          value={Math.min(100, progressValue)} 
+                          className="h-2"
                         />
                       </div>
-                      <p className="text-sm text-muted-foreground">{link.url}</p>
-                    </div>
-                    <Badge variant={link.enabled ? "default" : "secondary"}>
-                      {link.expireType === "clicks" ? "Click-based" : "Time-based"}
-                    </Badge>
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {link.expireType === "clicks" 
-                          ? `${link.currentClicks} / ${link.maxClicks} clicks` 
-                          : `${link.daysLeft} days remaining`}
-                      </span>
-                      <span className="font-medium">{Math.round(progressValue)}%</span>
+                      {expireLink.isExpired && (
+                        <Badge variant="destructive" className="w-full justify-center">
+                          Link Expired
+                        </Badge>
+                      )}
+
+                      <div className="pt-3 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 px-2 py-1.5 bg-muted rounded text-xs truncate">
+                            {window.location.origin}/l/{expireLink.link?.short_code}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => copyToClipboard(expireLink.link?.short_code)}
+                          >
+                            {copiedLink === expireLink.link?.short_code ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <Progress 
-                      value={progressValue} 
-                      className="h-2"
-                    />
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -433,6 +601,12 @@ const SmartAutomation = () => {
         onOpenChange={setIsDialogOpen}
         links={links}
         onTestCreated={fetchABTests}
+      />
+
+      <CreateExpireLinkDialog
+        isOpen={isExpireLinkDialogOpen}
+        onClose={() => setIsExpireLinkDialogOpen(false)}
+        onSuccess={fetchExpireLinks}
       />
     </div>
   );

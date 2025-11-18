@@ -65,6 +65,50 @@ export type Database = {
           },
         ]
       }
+      expire_links: {
+        Row: {
+          created_at: string
+          expire_type: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          link_id: string
+          max_clicks: number | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expire_type: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_id: string
+          max_clicks?: number | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expire_type?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_id?: string
+          max_clicks?: number | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expire_links_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       link_clicks: {
         Row: {
           browser: string | null
