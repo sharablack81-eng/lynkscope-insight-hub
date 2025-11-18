@@ -30,8 +30,12 @@ const parseUserAgent = (userAgent: string | null): { browser: string; deviceType
 
 // Get location from IP address using ip-api.com (free service)
 const getLocationFromIP = async (ip: string | null): Promise<{ country: string; continent: string }> => {
+  // Default to North America for local/development IPs
+  const defaultLocation = { country: 'United States', continent: 'North America' };
+  
   if (!ip || ip === '::1' || ip === '127.0.0.1') {
-    return { country: 'Unknown', continent: 'Unknown' };
+    console.log('Localhost IP detected, using default location:', defaultLocation);
+    return defaultLocation;
   }
   
   // Extract the real public IP from comma-separated list (handles proxy forwarding)
@@ -46,8 +50,8 @@ const getLocationFromIP = async (ip: string | null): Promise<{ country: string; 
   );
 
   if (!publicIP) {
-    console.log('No public IP found in:', ip);
-    return { country: 'Unknown', continent: 'Unknown' };
+    console.log('No public IP found in:', ip, 'using default location:', defaultLocation);
+    return defaultLocation;
   }
   
   try {
@@ -59,17 +63,17 @@ const getLocationFromIP = async (ip: string | null): Promise<{ country: string; 
     
     if (data.status === 'success') {
       return {
-        country: data.country || 'Unknown',
-        continent: data.continent || 'Unknown'
+        country: data.country || defaultLocation.country,
+        continent: data.continent || defaultLocation.continent
       };
     } else {
-      console.log('Location API failed:', data.message);
+      console.log('Location API failed:', data.message, 'using default location');
     }
   } catch (error) {
-    console.error('Error fetching location:', error);
+    console.error('Error fetching location:', error, 'using default location');
   }
   
-  return { country: 'Unknown', continent: 'Unknown' };
+  return defaultLocation;
 };
 
 serve(async (req) => {
