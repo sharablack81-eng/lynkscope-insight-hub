@@ -28,51 +28,66 @@ const parseUserAgent = (userAgent: string | null): { browser: string; deviceType
   return { browser, deviceType };
 };
 
-// Get location from IP address using ip-api.com (free service)
-const getLocationFromIP = async (ip: string | null): Promise<{ country: string; continent: string }> => {
-  // Default to North America for local/development IPs
+// Map country codes to continents
+const countryToContinent: Record<string, { country: string; continent: string }> = {
+  'US': { country: 'United States', continent: 'North America' },
+  'CA': { country: 'Canada', continent: 'North America' },
+  'MX': { country: 'Mexico', continent: 'North America' },
+  'GB': { country: 'United Kingdom', continent: 'Europe' },
+  'UK': { country: 'United Kingdom', continent: 'Europe' },
+  'FR': { country: 'France', continent: 'Europe' },
+  'DE': { country: 'Germany', continent: 'Europe' },
+  'ES': { country: 'Spain', continent: 'Europe' },
+  'IT': { country: 'Italy', continent: 'Europe' },
+  'PT': { country: 'Portugal', continent: 'Europe' },
+  'NL': { country: 'Netherlands', continent: 'Europe' },
+  'BR': { country: 'Brazil', continent: 'South America' },
+  'AR': { country: 'Argentina', continent: 'South America' },
+  'CL': { country: 'Chile', continent: 'South America' },
+  'CO': { country: 'Colombia', continent: 'South America' },
+  'PE': { country: 'Peru', continent: 'South America' },
+  'CN': { country: 'China', continent: 'Asia' },
+  'JP': { country: 'Japan', continent: 'Asia' },
+  'IN': { country: 'India', continent: 'Asia' },
+  'KR': { country: 'South Korea', continent: 'Asia' },
+  'TH': { country: 'Thailand', continent: 'Asia' },
+  'SG': { country: 'Singapore', continent: 'Asia' },
+  'AU': { country: 'Australia', continent: 'Oceania' },
+  'NZ': { country: 'New Zealand', continent: 'Oceania' },
+  'ZA': { country: 'South Africa', continent: 'Africa' },
+  'EG': { country: 'Egypt', continent: 'Africa' },
+  'NG': { country: 'Nigeria', continent: 'Africa' },
+  'KE': { country: 'Kenya', continent: 'Africa' },
+};
+
+// Get location from browser language settings
+const getLocationFromLanguage = (acceptLanguage: string | null): { country: string; continent: string } => {
   const defaultLocation = { country: 'United States', continent: 'North America' };
   
-  if (!ip || ip === '::1' || ip === '127.0.0.1') {
-    console.log('Localhost IP detected, using default location:', defaultLocation);
+  if (!acceptLanguage) {
+    console.log('No Accept-Language header, using default location');
     return defaultLocation;
   }
   
-  // Extract the real public IP from comma-separated list (handles proxy forwarding)
-  // The x-forwarded-for header often contains: "client, proxy1, proxy2"
-  // We want the first public IP in the chain
-  const publicIP = ip.split(',').map(i => i.trim()).find(i => 
-    !i.startsWith('172.') && 
-    !i.startsWith('192.168.') && 
-    !i.startsWith('10.') &&
-    i !== '::1' &&
-    i !== '127.0.0.1'
-  );
-
-  if (!publicIP) {
-    console.log('No public IP found in:', ip, 'using default location:', defaultLocation);
-    return defaultLocation;
-  }
+  console.log('Accept-Language header:', acceptLanguage);
   
-  try {
-    console.log('Fetching location for IP:', publicIP);
-    const response = await fetch(`http://ip-api.com/json/${publicIP}`);
-    const data = await response.json();
-    
-    console.log('Location API response:', data);
-    
-    if (data.status === 'success') {
-      return {
-        country: data.country || defaultLocation.country,
-        continent: data.continent || defaultLocation.continent
-      };
-    } else {
-      console.log('Location API failed:', data.message, 'using default location');
+  // Parse Accept-Language header (e.g., "en-US,en;q=0.9" or "es-MX")
+  const languages = acceptLanguage.split(',').map(l => l.split(';')[0].trim());
+  
+  for (const lang of languages) {
+    // Extract country code (e.g., "en-US" -> "US", "es-MX" -> "MX")
+    const parts = lang.split('-');
+    if (parts.length === 2) {
+      const countryCode = parts[1].toUpperCase();
+      console.log('Checking country code:', countryCode);
+      if (countryToContinent[countryCode]) {
+        console.log('Found location:', countryToContinent[countryCode]);
+        return countryToContinent[countryCode];
+      }
     }
-  } catch (error) {
-    console.error('Error fetching location:', error, 'using default location');
   }
   
+  console.log('No matching country code found, using default location');
   return defaultLocation;
 };
 
@@ -150,9 +165,12 @@ serve(async (req) => {
     const userAgent = req.headers.get('user-agent');
     const { browser, deviceType } = parseUserAgent(userAgent);
 
-    // Get IP address and location
+    // Get location from browser language
+    const acceptLanguage = req.headers.get('accept-language');
+    const { country, continent } = getLocationFromLanguage(acceptLanguage);
+    
+    // Keep IP for logging purposes but don't use for geolocation
     const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
-    const { country, continent } = await getLocationFromIP(ipAddress);
 
     // Track the click
     const { error: clickError } = await supabaseClient
