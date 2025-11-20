@@ -6,14 +6,13 @@ interface WorldMapProps {
 }
 
 const continentPositions: Record<string, { left: string; top: string }> = {
-  'North America': { left: '20%', top: '30%' },
+  'North America': { left: '18%', top: '30%' },
   'South America': { left: '28%', top: '58%' },
   'Europe': { left: '50%', top: '25%' },
   'Africa': { left: '52%', top: '48%' },
   'Asia': { left: '70%', top: '32%' },
   'Oceania': { left: '80%', top: '60%' },
   'Antarctica': { left: '50%', top: '85%' },
-  'Unknown': { left: '50%', top: '50%' }, // Center for testing/development
 };
 
 export const WorldMap = ({ data }: WorldMapProps) => {
@@ -32,11 +31,13 @@ export const WorldMap = ({ data }: WorldMapProps) => {
       <div className="absolute inset-0 bg-gradient-to-b from-background/20 to-background/40" />
 
       {/* Click markers */}
-      {data.map(({ continent, clicks }) => {
-        const position = continentPositions[continent];
-        if (!position) return null;
+      {data
+        .filter(({ continent }) => continent !== 'Unknown')
+        .map(({ continent, clicks }) => {
+          const position = continentPositions[continent];
+          if (!position) return null;
 
-        const scale = Math.min((clicks / maxClicks) * 2 + 0.5, 3);
+          const scale = Math.min((clicks / maxClicks) * 1 + 0.4, 1.5);
 
         return (
           <motion.div
@@ -51,33 +52,12 @@ export const WorldMap = ({ data }: WorldMapProps) => {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Pulsing outer ring */}
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/30"
-              style={{
-                width: `${scale * 30}px`,
-                height: `${scale * 30}px`,
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-              }}
-              animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.5, 0, 0.5],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            />
-            
             {/* Main dot */}
             <motion.div
               className="relative rounded-full bg-primary shadow-[0_0_20px_rgba(147,51,234,0.5)]"
               style={{
-                width: `${scale * 16}px`,
-                height: `${scale * 16}px`,
+                width: `${scale * 20}px`,
+                height: `${scale * 20}px`,
               }}
               whileHover={{ scale: 1.2 }}
             />
