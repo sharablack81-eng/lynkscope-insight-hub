@@ -192,6 +192,39 @@ export type Database = {
         }
         Relationships: []
       }
+      merchants: {
+        Row: {
+          created_at: string
+          id: string
+          shopify_charge_id: string | null
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          trial_end_date: string
+          trial_start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shopify_charge_id?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end_date?: string
+          trial_start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shopify_charge_id?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end_date?: string
+          trial_start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -227,7 +260,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      subscription_status: "trial" | "active" | "cancelled" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -354,6 +387,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_status: ["trial", "active", "cancelled", "expired"],
+    },
   },
 } as const

@@ -30,13 +30,42 @@ export const useSubscription = (): SubscriptionState => {
           return;
         }
 
-        // Default to trial - database table will be set up later
+        const { data: merchant, error } = await supabase
+          .from("merchants")
+          .select("subscription_status, trial_end_date")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error || !merchant) {
+          // Default to trial if no merchant record found
+          setState({
+            status: "trial",
+            daysRemaining: 14,
+            isLoading: false,
+            canUsePremiumFeatures: true,
+            trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          });
+          return;
+        }
+
+        const trialEnd = new Date(merchant.trial_end_date);
+        const now = new Date();
+        const daysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        // Check if trial has expired
+        let status = merchant.subscription_status as SubscriptionStatus;
+        if (status === "trial" && daysRemaining <= 0) {
+          status = "expired";
+        }
+
+        const canUsePremiumFeatures = status === "trial" || status === "active";
+
         setState({
-          status: "trial",
-          daysRemaining: 14,
+          status,
+          daysRemaining,
           isLoading: false,
-          canUsePremiumFeatures: true,
-          trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          canUsePremiumFeatures,
+          trialEndDate: trialEnd,
         });
       } catch (err) {
         console.error("Subscription fetch error:", err);
