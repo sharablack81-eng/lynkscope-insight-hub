@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   Zap,
-  Wrench
+  Wrench,
+  TrendingUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   ];
 
   const premiumMenuItems = [
+    { icon: TrendingUp, label: "Advanced Analytics", path: "/advanced-analytics" },
     { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Wrench, label: "Tools", path: "/tools" },
   ];
@@ -85,14 +87,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             })}
           </div>
 
-          {/* Divider */}
-          <div className="my-4 border-t border-sidebar-border" />
-
           {/* Premium Features */}
           <div className="space-y-2">
-            {sidebarOpen && (
-              <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">Pro Features</span>
-            )}
             {premiumMenuItems.map((item, index) => {
               const isActive = location.pathname === item.path;
               return (
