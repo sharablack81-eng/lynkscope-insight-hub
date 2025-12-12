@@ -11,10 +11,12 @@ import {
   X,
   Zap,
   Wrench,
-  TrendingUp
+  TrendingUp,
+  Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -24,6 +26,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const { status, daysRemaining, isLoading: subscriptionLoading } = useSubscription();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -147,7 +150,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Main Content */}
       <main className={`flex-1 flex flex-col ${sidebarOpen ? "ml-64" : "ml-20"} transition-all duration-300`}>
         {/* Header */}
-        <header className="h-16 border-b border-border bg-card flex items-center px-6 sticky top-0 z-10">
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 sticky top-0 z-10">
           <Button
             variant="ghost"
             size="icon"
@@ -156,6 +159,21 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
+
+          {/* Trial countdown */}
+          {!subscriptionLoading && status === 'trial' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left in trial
+              </span>
+            </div>
+          )}
+          {!subscriptionLoading && status === 'active' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+              <span className="text-sm font-medium text-green-500">Pro</span>
+            </div>
+          )}
         </header>
 
         {children}
