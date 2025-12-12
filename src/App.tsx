@@ -12,6 +12,8 @@ import Analytics from "./pages/Analytics";
 import AnalyticsOverview from "./pages/AnalyticsOverview";
 import Settings from "./pages/Settings";
 import Premium from "./pages/Premium";
+import Automation from "./pages/Automation";
+import Tools from "./pages/Tools";
 import NotFound from "./pages/NotFound";
 import Redirect from "./pages/Redirect";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -76,6 +78,8 @@ const App = () => {
           <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+          <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
+          <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

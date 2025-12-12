@@ -7,9 +7,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Crown,
   Menu,
-  X
+  X,
+  Zap,
+  Wrench
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,18 +21,8 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [hasProAccess, setHasProAccess] = useState(() => {
-    return localStorage.getItem('hasProAccess') === 'true';
-  });
   const location = useLocation();
   const navigate = useNavigate();
-
-  const handleUpgradeToPro = () => {
-    localStorage.setItem('hasProAccess', 'true');
-    setHasProAccess(true);
-    navigate('/premium');
-    toast.success("Welcome to LynkScope Pro!");
-  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -43,16 +34,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     }
   };
 
-  const baseMenuItems = [
+  const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: LinkIcon, label: "Links", path: "/links" },
     { icon: BarChart3, label: "Analytics", path: "/analytics" },
-    { icon: Settings, label: "Settings", path: "/settings" }
   ];
 
-  const menuItems = hasProAccess 
-    ? [...baseMenuItems, { icon: Crown, label: "Pro", path: "/premium" }]
-    : baseMenuItems;
+  const premiumMenuItems = [
+    { icon: Zap, label: "Automation", path: "/automation" },
+    { icon: Wrench, label: "Tools", path: "/tools" },
+  ];
 
   return (
     <div className="min-h-screen flex">
@@ -71,26 +62,78 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
 
         {/* Menu */}
-        <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item, index) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link key={index} to={item.path}>
-                <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-sidebar-accent group ${
-                    isActive ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground"
-                  }`}
-                >
-                  <item.icon
-                    className={`w-5 h-5 flex-shrink-0 ${
-                      isActive ? "text-sidebar-primary" : "text-muted-foreground group-hover:text-sidebar-foreground"
+        <nav className="flex-1 p-4 space-y-2 flex flex-col">
+          <div className="space-y-2">
+            {mainMenuItems.map((item, index) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link key={index} to={item.path}>
+                  <button
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-sidebar-accent group ${
+                      isActive ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground"
                     }`}
-                  />
-                  {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                </button>
-              </Link>
-            );
-          })}
+                  >
+                    <item.icon
+                      className={`w-5 h-5 flex-shrink-0 ${
+                        isActive ? "text-sidebar-primary" : "text-muted-foreground group-hover:text-sidebar-foreground"
+                      }`}
+                    />
+                    {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                  </button>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 border-t border-sidebar-border" />
+
+          {/* Premium Features */}
+          <div className="space-y-2">
+            {sidebarOpen && (
+              <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">Pro Features</span>
+            )}
+            {premiumMenuItems.map((item, index) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link key={index} to={item.path}>
+                  <button
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-sidebar-accent group ${
+                      isActive ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground"
+                    }`}
+                  >
+                    <item.icon
+                      className={`w-5 h-5 flex-shrink-0 ${
+                        isActive ? "text-sidebar-primary" : "text-muted-foreground group-hover:text-sidebar-foreground"
+                      }`}
+                    />
+                    {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                  </button>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Settings at bottom */}
+          <div className="space-y-2">
+            <Link to="/settings">
+              <button
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-sidebar-accent group ${
+                  location.pathname === "/settings" ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground"
+                }`}
+              >
+                <Settings
+                  className={`w-5 h-5 flex-shrink-0 ${
+                    location.pathname === "/settings" ? "text-sidebar-primary" : "text-muted-foreground group-hover:text-sidebar-foreground"
+                  }`}
+                />
+                {sidebarOpen && <span className="font-medium">Settings</span>}
+              </button>
+            </Link>
+          </div>
         </nav>
 
         {/* Logout */}
@@ -108,7 +151,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Main Content */}
       <main className={`flex-1 flex flex-col ${sidebarOpen ? "ml-64" : "ml-20"} transition-all duration-300`}>
         {/* Header */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 sticky top-0 z-10">
+        <header className="h-16 border-b border-border bg-card flex items-center px-6 sticky top-0 z-10">
           <Button
             variant="ghost"
             size="icon"
@@ -117,16 +160,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
-          
-          {!hasProAccess && (
-            <Button 
-              onClick={handleUpgradeToPro}
-              className="gradient-purple glow-purple hover:glow-purple-strong transition-all hover:scale-105"
-            >
-              <Crown className="w-4 h-4 mr-2" />
-              Upgrade to Pro
-            </Button>
-          )}
         </header>
 
         {children}

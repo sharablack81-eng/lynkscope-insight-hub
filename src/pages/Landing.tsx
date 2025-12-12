@@ -52,7 +52,7 @@ const Landing = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link to="/auth">
                 <Button size="lg" className="gradient-purple glow-purple hover:glow-purple-strong transition-all text-lg px-8 hover:scale-105 duration-300">
-                  Get Started Free
+                  Start 14-Day Free Trial
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
@@ -208,11 +208,11 @@ const Landing = () => {
         <div className="container mx-auto max-w-4xl text-center">
           <div className="animate-fade-in-up">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Start tracking smarter — join LynkScope for free today.
+              Start tracking smarter — try LynkScope free for 14 days.
             </h2>
             <Link to="/auth">
               <Button size="lg" className="gradient-purple glow-purple-strong hover:scale-110 transition-all text-lg px-12 animate-glow-pulse">
-                Sign Up Free
+                Start 14-Day Free Trial
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>

@@ -66,7 +66,7 @@ const TrialExpiredScreen = ({ onUninstall }: TrialExpiredScreenProps) => {
               className="w-full bg-primary hover:bg-primary/90 glow-purple h-12 text-base"
             >
               <Sparkles className="w-5 h-5 mr-2" />
-              Start Pro ($20/month)
+              Upgrade to Pro for Full Access
             </Button>
             
             {onUninstall && (
