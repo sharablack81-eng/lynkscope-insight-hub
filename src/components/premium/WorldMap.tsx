@@ -11,7 +11,8 @@ const continentPositions: Record<string, { left: string; top: string }> = {
   'Europe': { left: '50%', top: '25%' },
   'Africa': { left: '52%', top: '48%' },
   'Asia': { left: '70%', top: '32%' },
-  'Oceania': { left: '80%', top: '60%' },
+  'Oceania': { left: '82%', top: '62%' },
+  'Australia': { left: '82%', top: '62%' },
   'Antarctica': { left: '50%', top: '85%' },
 };
 
