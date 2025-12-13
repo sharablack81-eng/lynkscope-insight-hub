@@ -11,18 +11,6 @@ import { WorldMap } from "./WorldMap";
 
 const AdvancedAnalytics = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
-  
-  // Toggle this to test map dot positions
-  const useMockData = true;
-  
-  const mockGeoData = [
-    { continent: 'Europe', clicks: 150 },
-    { continent: 'North America', clicks: 300 },
-    { continent: 'Asia', clicks: 120 },
-    { continent: 'South America', clicks: 80 },
-    { continent: 'Africa', clicks: 50 },
-    { continent: 'Oceania', clicks: 40 },
-  ];
 
   // Fetch link clicks data
   const { data: clicksData } = useQuery({
@@ -60,7 +48,7 @@ const AdvancedAnalytics = () => {
   };
 
   // Process geographic data by continent
-  const geoData = useMockData ? mockGeoData : (() => {
+  const geoData = (() => {
     if (!clicksData?.clicks.length) return [];
     
     const continents = clicksData.clicks.reduce((acc: Record<string, number>, click: any) => {
