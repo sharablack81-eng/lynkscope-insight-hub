@@ -162,11 +162,25 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
           {/* Trial countdown */}
           {!subscriptionLoading && status === 'trial' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 ${
+              daysRemaining <= 2 
+                ? 'bg-destructive/10 border-destructive/30 animate-pulse' 
+                : 'bg-primary/10 border-primary/20'
+            }`}>
+              <Clock className={`w-4 h-4 ${daysRemaining <= 2 ? 'text-destructive' : 'text-primary'}`} />
+              <span className={`text-sm font-medium ${daysRemaining <= 2 ? 'text-destructive' : 'text-primary'}`}>
                 {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left in trial
               </span>
+              {daysRemaining <= 2 && (
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  className="ml-2 h-6 text-xs px-2"
+                  onClick={() => navigate('/settings')}
+                >
+                  Upgrade Now
+                </Button>
+              )}
             </div>
           )}
           {!subscriptionLoading && status === 'active' && (
