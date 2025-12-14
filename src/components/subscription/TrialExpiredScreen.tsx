@@ -13,11 +13,8 @@ const TrialExpiredScreen = ({ onUninstall }: TrialExpiredScreenProps) => {
   const { status, isLoading } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  // TESTING: Set to true to preview the expired screen
-  const testExpiredMode = true;
-
-  // Only show if trial has expired (or in test mode)
-  if (!testExpiredMode && (isLoading || status === "trial" || status === "active")) {
+  // Only show if trial has expired
+  if (isLoading || status === "trial" || status === "active") {
     return null;
   }
 
