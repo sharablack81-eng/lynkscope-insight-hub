@@ -23,13 +23,19 @@ import {
   Upload,
   Check,
   AlertTriangle,
+  Sparkles,
+  Crown,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubscription } from "@/hooks/useSubscription";
+import UpgradeModal from "@/components/subscription/UpgradeModal";
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { status, daysRemaining, isLoading: subscriptionLoading } = useSubscription();
   const [displayName, setDisplayName] = useState("user");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -38,6 +44,8 @@ const Settings = () => {
   const [backgroundAnimation, setBackgroundAnimation] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,6 +53,7 @@ const Settings = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [cancellingSubscription, setCancellingSubscription] = useState(false);
 
   const accentColors = [
     { name: "Purple", value: "#8B5CF6", hsl: "258 90% 66%" },
@@ -316,6 +325,46 @@ const Settings = () => {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    try {
+      setCancellingSubscription(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please log in to cancel subscription");
+        return;
+      }
+
+      // Call via fetch with query param since supabase.functions.invoke doesn't support query params
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-billing?action=cancel`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel');
+      }
+
+      toast.success("Subscription cancelled");
+      setShowCancelModal(false);
+      // Refresh the page to update subscription status
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error cancelling subscription:', error);
+      toast.error(error.message || "Failed to cancel subscription");
+    } finally {
+      setCancellingSubscription(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="flex-1 flex flex-col">
@@ -487,25 +536,76 @@ const Settings = () => {
                 </div>
               </div>
 
-              <div className="p-6 bg-card/50 rounded-lg border border-primary/20 hover:border-primary/40 transition-all animate-pulse-slow">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-primary">Free Tier</h3>
-                    <p className="text-sm text-muted-foreground">Basic analytics and link management</p>
-                  </div>
-                  <span className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full font-medium">
-                    Current Plan
-                  </span>
+              {subscriptionLoading ? (
+                <div className="p-6 bg-card/50 rounded-lg border border-border flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
+              ) : status === "active" ? (
+                <div className="p-6 bg-card/50 rounded-lg border border-primary/20 hover:border-primary/40 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                        <Crown className="w-5 h-5" />
+                        LynkScope Pro
+                      </h3>
+                      <p className="text-sm text-muted-foreground">Full access to all premium features</p>
+                    </div>
+                    <span className="px-3 py-1 bg-primary/20 text-primary text-xs rounded-full font-medium">
+                      Active
+                    </span>
+                  </div>
 
-                <Button
-                  variant="outline"
-                  disabled
-                  className="w-full opacity-50 cursor-not-allowed"
-                >
-                  Upgrade (Coming Soon)
-                </Button>
-              </div>
+                  <div className="text-2xl font-bold text-foreground mb-4">
+                    $20<span className="text-sm font-normal text-muted-foreground">/month</span>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCancelModal(true)}
+                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive"
+                  >
+                    Cancel Subscription
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-6 bg-card/50 rounded-lg border border-primary/20 hover:border-primary/40 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground">
+                        {status === "trial" ? "Free Trial" : "No Active Plan"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {status === "trial" 
+                          ? `${daysRemaining} days remaining · All Pro features unlocked`
+                          : "Upgrade to access premium features"
+                        }
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                      status === "trial" 
+                        ? "bg-amber-500/20 text-amber-500" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {status === "trial" ? "Trial" : status === "expired" ? "Expired" : "Cancelled"}
+                    </span>
+                  </div>
+
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+                    <div className="text-2xl font-bold text-foreground mb-1">
+                      $20<span className="text-sm font-normal text-muted-foreground">/month</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Cancel anytime · Managed by Shopify</p>
+                  </div>
+
+                  <Button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="w-full bg-primary hover:bg-primary/90 glow-purple"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Upgrade to Pro
+                  </Button>
+                </div>
+              )}
             </Card>
 
             {/* Security */}
@@ -641,6 +741,59 @@ const Settings = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Subscription Modal */}
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent className="glass-card border-destructive">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Cancel Subscription
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel your Pro subscription? You'll lose access to all premium features.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <p className="text-sm text-foreground font-medium mb-2">What you'll lose:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Advanced analytics & insights</li>
+                <li>• Geographic tracking & world map</li>
+                <li>• Smart automation & A/B testing</li>
+                <li>• Export data & reports</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCancelModal(false)}
+              disabled={cancellingSubscription}
+            >
+              Keep Pro
+            </Button>
+            <Button
+              variant="destructive"
+              className="hover:scale-105 transition-all"
+              onClick={handleCancelSubscription}
+              disabled={cancellingSubscription}
+            >
+              {cancellingSubscription ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Cancel Subscription"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
     </DashboardLayout>
   );
 };

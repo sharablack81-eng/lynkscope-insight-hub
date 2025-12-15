@@ -50,10 +50,11 @@ const TrialBanner = ({ onUpgrade }: TrialBannerProps) => {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-lg p-4 mb-6 border ${
+      onClick={onUpgrade}
+      className={`rounded-lg p-4 mb-6 border cursor-pointer transition-all hover:scale-[1.01] ${
         isUrgent 
-          ? "bg-amber-500/10 border-amber-500/30" 
-          : "bg-primary/10 border-primary/30"
+          ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50" 
+          : "bg-primary/10 border-primary/30 hover:border-primary/50"
       }`}
     >
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -69,21 +70,22 @@ const TrialBanner = ({ onUpgrade }: TrialBannerProps) => {
             </p>
             <p className="text-sm text-muted-foreground">
               {isUrgent 
-                ? "Your trial is ending soon — upgrade to keep access" 
-                : "All Pro features unlocked during your trial"
+                ? "Your trial is ending soon — click to upgrade" 
+                : "All Pro features unlocked · Click to view upgrade options"
               }
             </p>
           </div>
         </div>
-        {isUrgent && (
-          <Button 
-            onClick={onUpgrade}
-            className="bg-primary hover:bg-primary/90 glow-purple"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Activate Pro
-          </Button>
-        )}
+        <Button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onUpgrade();
+          }}
+          className="bg-primary hover:bg-primary/90 glow-purple"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          {isUrgent ? "Activate Pro" : "Upgrade"}
+        </Button>
       </div>
     </motion.div>
   );
