@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [metrics, setMetrics] = useState([
     {
       label: "Total Clicks",
@@ -43,7 +44,40 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
     fetchUserProfile();
+    handleChargeConfirmation();
   }, []);
+
+  const handleChargeConfirmation = async () => {
+    const chargeId = searchParams.get('charge_id');
+    const userId = searchParams.get('user_id');
+    
+    if (chargeId && userId) {
+      try {
+        // Confirm the charge via edge function
+        const { data, error } = await supabase.functions.invoke('shopify-billing', {
+          body: null,
+        });
+        
+        // Call with query params for confirmation
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-billing?action=confirm-charge&charge_id=${chargeId}&user_id=${userId}`
+        );
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          toast.success("Subscription activated successfully!");
+          // Clear URL params
+          navigate('/dashboard', { replace: true });
+        } else {
+          toast.error("Failed to activate subscription");
+        }
+      } catch (error) {
+        console.error('Charge confirmation error:', error);
+        toast.error("Failed to confirm subscription");
+      }
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {

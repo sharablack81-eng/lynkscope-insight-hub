@@ -17,6 +17,8 @@ import {
   Check,
   Loader2
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -36,16 +38,36 @@ const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
   const handleUpgrade = async () => {
     setIsLoading(true);
     
-    // TODO: Integrate with Shopify Billing API
-    // This will redirect to Shopify's approval screen
-    console.log("Initiating Shopify billing flow...");
-    
-    // Simulate redirect delay
-    setTimeout(() => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please log in to upgrade");
+        setIsLoading(false);
+        return;
+      }
+
+      // Call the shopify-billing edge function to create a charge
+      const { data, error } = await supabase.functions.invoke('shopify-billing', {
+        body: { returnUrl: `${window.location.origin}/dashboard` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) {
+        console.error('Billing error:', error);
+        toast.error("Failed to initiate billing. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.confirmationUrl) {
+        // Redirect to confirmation URL (in production this would be Shopify)
+        window.location.href = data.confirmationUrl;
+      }
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      toast.error("Something went wrong. Please try again.");
       setIsLoading(false);
-      // In production, this would redirect to Shopify
-      alert("Shopify Billing integration pending. Add your Shopify credentials to enable payments.");
-    }, 1500);
+    }
   };
 
   return (

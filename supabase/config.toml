@@ -1,1 +1,4 @@
 project_id = "dcjhxvoyheyjgocohihp"
+
+[functions.shopify-billing]
+verify_jwt = false
