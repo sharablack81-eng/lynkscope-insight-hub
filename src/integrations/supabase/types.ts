@@ -196,6 +196,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          shop_domain: string | null
+          shopify_access_token: string | null
           shopify_charge_id: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           trial_end_date: string
@@ -206,6 +208,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          shop_domain?: string | null
+          shopify_access_token?: string | null
           shopify_charge_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_end_date?: string
@@ -216,6 +220,8 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          shop_domain?: string | null
+          shopify_access_token?: string | null
           shopify_charge_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_end_date?: string
