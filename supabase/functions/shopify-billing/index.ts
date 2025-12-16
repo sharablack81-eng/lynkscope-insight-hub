@@ -6,13 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SHOPIFY_CLIENT_ID = Deno.env.get('SHOPIFY_CLIENT_ID');
-const SHOPIFY_CLIENT_SECRET = Deno.env.get('SHOPIFY_CLIENT_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,13 +18,11 @@ serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
     
-    console.log('Shopify billing request:', { action, url: req.url });
+    console.log('Shopify billing request:', { action });
 
-    // Initialize Supabase client with service role for admin operations
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
     if (action === 'create-charge') {
-      // Get user from authorization header
       const authHeader = req.headers.get('authorization');
       if (!authHeader) {
         return new Response(JSON.stringify({ error: 'Missing authorization' }), {
@@ -36,7 +31,6 @@ serve(async (req) => {
         });
       }
 
-      // Verify user token
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       
@@ -48,22 +42,72 @@ serve(async (req) => {
         });
       }
 
+      // Get merchant's shop data
+      const { data: merchant, error: merchantError } = await supabase
+        .from('merchants')
+        .select('shop_domain, shopify_access_token')
+        .eq('user_id', user.id)
+        .single();
+
+      if (merchantError || !merchant) {
+        console.error('Merchant lookup error:', merchantError);
+        return new Response(JSON.stringify({ error: 'Merchant not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!merchant.shop_domain || !merchant.shopify_access_token) {
+        return new Response(JSON.stringify({ 
+          error: 'Shop not connected',
+          needsConnection: true,
+          message: 'Please connect your Shopify store first'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const body = await req.json();
       const returnUrl = body.returnUrl;
 
-      // For Shopify billing, we need a Shopify store domain
-      // Since this is a standalone app, we'll use a simplified approach
-      // The user needs to have connected their Shopify store first
-      
-      // For now, we'll create a confirmation URL that simulates the billing flow
-      // In production, this would integrate with actual Shopify OAuth + Billing API
-      
-      const confirmUrl = `${returnUrl}?charge_id=simulated_${Date.now()}&user_id=${user.id}`;
-      
-      console.log('Created charge confirmation URL for user:', user.id);
+      // Create recurring application charge via Shopify Admin API
+      const chargeResponse = await fetch(
+        `https://${merchant.shop_domain}/admin/api/2024-01/recurring_application_charges.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Access-Token': merchant.shopify_access_token,
+          },
+          body: JSON.stringify({
+            recurring_application_charge: {
+              name: 'LynkScope Pro',
+              price: 20.0,
+              return_url: `${SUPABASE_URL}/functions/v1/shopify-billing?action=confirm-charge&user_id=${user.id}`,
+              trial_days: 0, // No additional trial since they already had 14-day free trial
+              test: true, // Set to false for production
+            },
+          }),
+        }
+      );
+
+      if (!chargeResponse.ok) {
+        const errorText = await chargeResponse.text();
+        console.error('Shopify charge creation failed:', errorText);
+        return new Response(JSON.stringify({ error: 'Failed to create charge' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const chargeData = await chargeResponse.json();
+      const confirmationUrl = chargeData.recurring_application_charge.confirmation_url;
+
+      console.log('Created charge for user:', user.id);
       
       return new Response(JSON.stringify({ 
-        confirmationUrl: confirmUrl,
+        confirmationUrl,
         message: 'Redirect user to confirm subscription'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -74,43 +118,74 @@ serve(async (req) => {
       const chargeId = url.searchParams.get('charge_id');
       const userId = url.searchParams.get('user_id');
 
+      console.log('Confirming charge:', { chargeId, userId });
+
       if (!chargeId || !userId) {
-        return new Response(JSON.stringify({ error: 'Missing charge_id or user_id' }), {
+        return new Response('Missing charge_id or user_id', {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: corsHeaders,
         });
       }
 
-      console.log('Confirming charge:', { chargeId, userId });
+      // Get merchant's shop data
+      const { data: merchant, error: merchantError } = await supabase
+        .from('merchants')
+        .select('shop_domain, shopify_access_token')
+        .eq('user_id', userId)
+        .single();
+
+      if (merchantError || !merchant?.shop_domain || !merchant?.shopify_access_token) {
+        console.error('Merchant lookup error:', merchantError);
+        const appUrl = Deno.env.get('APP_URL') || 'https://your-app.lovable.app';
+        return new Response(null, {
+          status: 302,
+          headers: { 'Location': `${appUrl}/dashboard?error=merchant_not_found` },
+        });
+      }
+
+      // Activate the charge
+      const activateResponse = await fetch(
+        `https://${merchant.shop_domain}/admin/api/2024-01/recurring_application_charges/${chargeId}/activate.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Access-Token': merchant.shopify_access_token,
+          },
+        }
+      );
+
+      if (!activateResponse.ok) {
+        const errorText = await activateResponse.text();
+        console.error('Charge activation failed:', errorText);
+        const appUrl = Deno.env.get('APP_URL') || 'https://your-app.lovable.app';
+        return new Response(null, {
+          status: 302,
+          headers: { 'Location': `${appUrl}/dashboard?error=activation_failed` },
+        });
+      }
 
       // Update merchant subscription status to active
-      const { data, error } = await supabase
+      const { error: updateError } = await supabase
         .from('merchants')
         .update({ 
           subscription_status: 'active',
           shopify_charge_id: chargeId,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', userId)
-        .select()
-        .single();
+        .eq('user_id', userId);
 
-      if (error) {
-        console.error('Error updating merchant:', error);
-        return new Response(JSON.stringify({ error: 'Failed to activate subscription' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      if (updateError) {
+        console.error('Error updating merchant:', updateError);
       }
 
       console.log('Subscription activated for user:', userId);
 
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'Subscription activated successfully',
-        merchant: data
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      // Redirect back to app
+      const appUrl = Deno.env.get('APP_URL') || 'https://your-app.lovable.app';
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': `${appUrl}/dashboard?subscription_activated=true` },
       });
     }
 
@@ -133,19 +208,42 @@ serve(async (req) => {
         });
       }
 
-      // Cancel subscription
-      const { data, error } = await supabase
+      // Get merchant's shop data
+      const { data: merchant, error: merchantError } = await supabase
+        .from('merchants')
+        .select('shop_domain, shopify_access_token, shopify_charge_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (merchant?.shop_domain && merchant?.shopify_access_token && merchant?.shopify_charge_id) {
+        // Cancel the charge on Shopify
+        try {
+          await fetch(
+            `https://${merchant.shop_domain}/admin/api/2024-01/recurring_application_charges/${merchant.shopify_charge_id}.json`,
+            {
+              method: 'DELETE',
+              headers: {
+                'X-Shopify-Access-Token': merchant.shopify_access_token,
+              },
+            }
+          );
+          console.log('Shopify charge cancelled');
+        } catch (e) {
+          console.error('Failed to cancel Shopify charge:', e);
+        }
+      }
+
+      // Update local status
+      const { error: updateError } = await supabase
         .from('merchants')
         .update({ 
           subscription_status: 'cancelled',
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id)
-        .select()
-        .single();
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error cancelling subscription:', error);
+      if (updateError) {
+        console.error('Error cancelling subscription:', updateError);
         return new Response(JSON.stringify({ error: 'Failed to cancel subscription' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
