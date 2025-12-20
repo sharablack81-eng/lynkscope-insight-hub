@@ -135,18 +135,21 @@ serve(async (req) => {
 
       console.log('Access token obtained for shop:', shop);
 
-      // Store shop connection in database
-      const { error: updateError } = await supabase
+      // Store shop connection in database using UPSERT
+      // This ensures the merchant record exists even if the trigger didn't fire
+      const { error: upsertError } = await supabase
         .from('merchants')
-        .update({ 
+        .upsert({ 
+          user_id: userId,
           shop_domain: shop,
           shopify_access_token: accessToken,
           updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
+        }, {
+          onConflict: 'user_id'
+        });
 
-      if (updateError) {
-        console.error('Failed to save shop connection:', updateError);
+      if (upsertError) {
+        console.error('Failed to save shop connection:', upsertError);
         return new Response('Failed to save shop connection', { 
           status: 500,
           headers: corsHeaders 

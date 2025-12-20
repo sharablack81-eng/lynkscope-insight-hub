@@ -42,19 +42,33 @@ serve(async (req) => {
         });
       }
 
-      // Get merchant's shop data
-      const { data: merchant, error: merchantError } = await supabase
+      // Get merchant's shop data, create if doesn't exist
+      let { data: merchant, error: merchantError } = await supabase
         .from('merchants')
         .select('shop_domain, shopify_access_token')
         .eq('user_id', user.id)
         .single();
 
+      // If merchant doesn't exist, create it (defensive programming)
       if (merchantError || !merchant) {
-        console.error('Merchant lookup error:', merchantError);
-        return new Response(JSON.stringify({ error: 'Merchant not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        console.log('Merchant not found, creating new merchant record for user:', user.id);
+        const { data: newMerchant, error: createError } = await supabase
+          .from('merchants')
+          .insert({ 
+            user_id: user.id,
+            subscription_status: 'trial'
+          })
+          .select('shop_domain, shopify_access_token')
+          .single();
+
+        if (createError || !newMerchant) {
+          console.error('Failed to create merchant:', createError);
+          return new Response(JSON.stringify({ error: 'Failed to initialize merchant account' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        merchant = newMerchant;
       }
 
       if (!merchant.shop_domain || !merchant.shopify_access_token) {
@@ -127,19 +141,42 @@ serve(async (req) => {
         });
       }
 
-      // Get merchant's shop data
-      const { data: merchant, error: merchantError } = await supabase
+      // Get merchant's shop data, create if doesn't exist
+      let { data: merchant, error: merchantError } = await supabase
         .from('merchants')
         .select('shop_domain, shopify_access_token')
         .eq('user_id', userId)
         .single();
 
-      if (merchantError || !merchant?.shop_domain || !merchant?.shopify_access_token) {
-        console.error('Merchant lookup error:', merchantError);
+      // If merchant doesn't exist, create it (defensive programming)
+      if (merchantError || !merchant) {
+        console.log('Merchant not found, creating new merchant record for user:', userId);
+        const { data: newMerchant, error: createError } = await supabase
+          .from('merchants')
+          .insert({ 
+            user_id: userId,
+            subscription_status: 'trial'
+          })
+          .select('shop_domain, shopify_access_token')
+          .single();
+
+        if (createError || !newMerchant) {
+          console.error('Failed to create merchant:', createError);
+          const appUrl = Deno.env.get('APP_URL') || 'https://your-app.lovable.app';
+          return new Response(null, {
+            status: 302,
+            headers: { 'Location': `${appUrl}/dashboard?error=merchant_not_found` },
+          });
+        }
+        merchant = newMerchant;
+      }
+
+      if (!merchant?.shop_domain || !merchant?.shopify_access_token) {
+        console.error('Merchant missing shop connection:', { shop_domain: merchant?.shop_domain, has_token: !!merchant?.shopify_access_token });
         const appUrl = Deno.env.get('APP_URL') || 'https://your-app.lovable.app';
         return new Response(null, {
           status: 302,
-          headers: { 'Location': `${appUrl}/dashboard?error=merchant_not_found` },
+          headers: { 'Location': `${appUrl}/dashboard?error=shop_not_connected` },
         });
       }
 
@@ -208,12 +245,34 @@ serve(async (req) => {
         });
       }
 
-      // Get merchant's shop data
-      const { data: merchant, error: merchantError } = await supabase
+      // Get merchant's shop data, create if doesn't exist
+      let { data: merchant, error: merchantError } = await supabase
         .from('merchants')
         .select('shop_domain, shopify_access_token, shopify_charge_id')
         .eq('user_id', user.id)
         .single();
+
+      // If merchant doesn't exist, create it (defensive programming)
+      if (merchantError || !merchant) {
+        console.log('Merchant not found, creating new merchant record for user:', user.id);
+        const { data: newMerchant, error: createError } = await supabase
+          .from('merchants')
+          .insert({ 
+            user_id: user.id,
+            subscription_status: 'cancelled'
+          })
+          .select('shop_domain, shopify_access_token, shopify_charge_id')
+          .single();
+
+        if (createError || !newMerchant) {
+          console.error('Failed to create merchant:', createError);
+          return new Response(JSON.stringify({ error: 'Failed to initialize merchant account' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        merchant = newMerchant;
+      }
 
       if (merchant?.shop_domain && merchant?.shopify_access_token && merchant?.shopify_charge_id) {
         // Cancel the charge on Shopify
