@@ -72,7 +72,8 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/l/:shortCode" element={<Redirect />} />
+          {/* Allow optional trailing slash/segments for smart links */}
+          <Route path="/l/:shortCode/*" element={<Redirect />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
