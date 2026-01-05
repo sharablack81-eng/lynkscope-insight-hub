@@ -81,7 +81,7 @@ const ToolsExports = () => {
     if (selectedLink) {
       const link = links.find(l => l.id === selectedLink);
       if (link) {
-        const shortUrl = `${window.location.origin}/${link.short_code}`;
+        const shortUrl = `${window.location.origin}/l/${link.short_code}`;
         navigator.clipboard.writeText(shortUrl);
         toast.success("Link copied to clipboard!");
       }
@@ -399,7 +399,7 @@ const ToolsExports = () => {
 
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-4">
-                      {window.location.origin}/{links.find(l => l.id === selectedLink)?.short_code}
+                      {window.location.origin}/l/{links.find(l => l.id === selectedLink)?.short_code}
                     </p>
                     <div className="flex gap-3">
                       <Button onClick={downloadQR} variant="outline" className="flex-1">
