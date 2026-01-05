@@ -91,7 +91,7 @@ function validateAndNormalizeShopDomain(shopDomain: string): string | null {
 // Check if webhook has already been processed (idempotency check)
 // Returns true if already processed, false if new
 async function isWebhookProcessed(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   webhookId: string
 ): Promise<boolean> {
   if (!webhookId) {
@@ -115,7 +115,7 @@ async function isWebhookProcessed(
 
 // Record webhook event as processed (for idempotency)
 async function recordWebhookProcessed(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   webhookId: string,
   shopDomain: string,
   topic: string,
@@ -150,7 +150,7 @@ async function recordWebhookProcessed(
 // This is REQUIRED for App Store approval - must clean up tokens and data
 // This function is IDEMPOTENT - safe to call multiple times with same data
 async function handleAppUninstall(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   shopDomain: string,
   webhookData: any
 ): Promise<void> {
@@ -288,7 +288,7 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!) as any;
 
     // Normalize shop domain for idempotency checks
     const normalizedShop = validateAndNormalizeShopDomain(shopDomain);
