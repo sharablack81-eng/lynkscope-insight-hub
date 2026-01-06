@@ -1,0 +1,18 @@
+# Render Blueprint (optional)
+# Ensures SPA routing works for smart-link deep routes by rewriting all paths to /index.html
+# Docs: https://render.com/docs/blueprint-spec
+
+staticSites:
+  - name: lynkscope
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Set these in Render (Dashboard → Environment) or via an Env Group
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
