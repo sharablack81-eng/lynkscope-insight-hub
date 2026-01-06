@@ -258,6 +258,59 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_link_clicks: {
+        Row: {
+          browser: string | null
+          clicked_at: string
+          continent: string | null
+          country: string | null
+          destination_url: string
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          link_id: string | null
+          merchant_id: string | null
+          referrer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          browser?: string | null
+          clicked_at?: string
+          continent?: string | null
+          country?: string | null
+          destination_url: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          link_id?: string | null
+          merchant_id?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          browser?: string | null
+          clicked_at?: string
+          continent?: string | null
+          country?: string | null
+          destination_url?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          link_id?: string | null
+          merchant_id?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_link_clicks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

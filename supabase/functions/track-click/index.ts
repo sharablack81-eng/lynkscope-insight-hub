@@ -97,12 +97,114 @@ serve(async (req) => {
   }
 
   try {
-    const { shortCode } = await req.json();
+    const body = await req.json().catch(() => ({} as any));
+
+    const shortCode = typeof body?.shortCode === "string" ? body.shortCode.trim() : "";
+    const destinationUrl = typeof body?.url === "string" ? body.url.trim() : "";
+    const linkIdRaw = typeof body?.linkId === "string" ? body.linkId.trim() : "";
+    const merchantIdRaw = typeof body?.merchantId === "string" ? body.merchantId.trim() : (typeof body?.mid === "string" ? body.mid.trim() : "");
+
+    const isUuid = (value: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Parse user agent
+    const userAgent = req.headers.get('user-agent');
+    const { browser, deviceType } = parseUserAgent(userAgent);
+
+    // Get location from browser language
+    const acceptLanguage = req.headers.get('accept-language');
+    const { country, continent } = getLocationFromLanguage(acceptLanguage);
+
+    // Keep IP for logging purposes but don't use for geolocation
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
+
+    // --- Query-parameter redirect mode (no DB lookup required) ---
+    if (destinationUrl) {
+      if (destinationUrl.length > 4096) {
+        return new Response(
+          JSON.stringify({ error: 'Destination URL is too long' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(destinationUrl);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: 'Invalid destination URL' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return new Response(
+          JSON.stringify({ error: 'Destination URL must be http(s)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const linkId = isUuid(linkIdRaw) ? linkIdRaw : null;
+      const merchantId = isUuid(merchantIdRaw) ? merchantIdRaw : null;
+
+      // Always record a smart-link click event
+      const { error: smartClickError } = await supabaseClient
+        .from('smart_link_clicks')
+        .insert({
+          destination_url: parsedUrl.toString(),
+          merchant_id: merchantId,
+          link_id: linkId,
+          referrer: req.headers.get('referer'),
+          user_agent: userAgent,
+          ip_address: ipAddress,
+          browser,
+          device_type: deviceType,
+          country,
+          continent,
+        });
+
+      if (smartClickError) {
+        console.error('Error tracking smart link click:', smartClickError);
+      }
+
+      // Optional: also log into existing per-link analytics when a valid link_id is provided
+      if (linkId) {
+        const { error: clickError } = await supabaseClient
+          .from('link_clicks')
+          .insert({
+            link_id: linkId,
+            referrer: req.headers.get('referer'),
+            user_agent: userAgent,
+            ip_address: ipAddress,
+            browser,
+            device_type: deviceType,
+            country,
+            continent,
+          });
+
+        if (clickError) {
+          console.error('Error tracking click:', clickError);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ url: parsedUrl.toString() }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- Legacy short-code mode ---
+    if (!shortCode) {
+      return new Response(
+        JSON.stringify({ error: 'Missing shortCode or url' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get the link
     const { data: link, error: linkError } = await supabaseClient
@@ -161,19 +263,8 @@ serve(async (req) => {
       }
     }
 
-    // Parse user agent
-    const userAgent = req.headers.get('user-agent');
-    const { browser, deviceType } = parseUserAgent(userAgent);
-
-    // Get location from browser language
-    const acceptLanguage = req.headers.get('accept-language');
-    const { country, continent } = getLocationFromLanguage(acceptLanguage);
-    
-    // Keep IP for logging purposes but don't use for geolocation
-    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
-
     // Track the click
-    const { error: clickError } = await supabaseClient
+    const { error: legacyClickError } = await supabaseClient
       .from('link_clicks')
       .insert({
         link_id: link.id,
@@ -186,8 +277,8 @@ serve(async (req) => {
         continent,
       });
 
-    if (clickError) {
-      console.error('Error tracking click:', clickError);
+    if (legacyClickError) {
+      console.error('Error tracking click:', legacyClickError);
     }
 
     return new Response(

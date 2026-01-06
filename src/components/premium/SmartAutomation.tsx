@@ -19,13 +19,30 @@ const SmartAutomation = () => {
   const [isExpireLinkDialogOpen, setIsExpireLinkDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [merchantId, setMerchantId] = useState<string>("");
   const { toast } = useToast();
 
-  const copyToClipboard = async (shortCode: string) => {
-    const url = `${window.location.origin}/l/${shortCode}`;
+  const getSmartUrl = (link?: { id?: string; url?: string } | null) => {
+    if (!link?.url) return "";
+    const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}${link.id ? `&linkId=${link.id}` : ""}`;
+    return merchantId ? `${base}&mid=${merchantId}` : base;
+  };
+
+  const copyToClipboard = async (link?: { id?: string; url?: string } | null) => {
+    const url = getSmartUrl(link);
+
+    if (!url) {
+      toast({
+        title: "Nothing to copy",
+        description: "This item is missing a destination URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(url);
-      setCopiedLink(shortCode);
+      setCopiedLink(url);
       toast({
         title: "Link copied!",
         description: "The link has been copied to your clipboard",
@@ -245,6 +262,7 @@ const SmartAutomation = () => {
   };
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setMerchantId(user?.id ?? ""));
     fetchABTests();
     fetchLinks();
     fetchExpireLinks();
@@ -384,15 +402,15 @@ const SmartAutomation = () => {
                         <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
                         <div className="flex items-center gap-2">
                           <code className="flex-1 px-2 py-1.5 bg-muted rounded text-xs truncate">
-                            {window.location.origin}/l/{test.variant_a?.short_code}
+                            {getSmartUrl(test.variant_a)}
                           </code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0"
-                            onClick={() => copyToClipboard(test.variant_a?.short_code)}
+                            onClick={() => copyToClipboard(test.variant_a)}
                           >
-                            {copiedLink === test.variant_a?.short_code ? (
+                            {copiedLink === getSmartUrl(test.variant_a) ? (
                               <Check className="w-4 h-4 text-green-500" />
                             ) : (
                               <Copy className="w-4 h-4" />
@@ -431,15 +449,15 @@ const SmartAutomation = () => {
                         <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
                         <div className="flex items-center gap-2">
                           <code className="flex-1 px-2 py-1.5 bg-muted rounded text-xs truncate">
-                            {window.location.origin}/l/{test.variant_b?.short_code}
+                            {getSmartUrl(test.variant_b)}
                           </code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0"
-                            onClick={() => copyToClipboard(test.variant_b?.short_code)}
+                            onClick={() => copyToClipboard(test.variant_b)}
                           >
-                            {copiedLink === test.variant_b?.short_code ? (
+                            {copiedLink === getSmartUrl(test.variant_b) ? (
                               <Check className="w-4 h-4 text-green-500" />
                             ) : (
                               <Copy className="w-4 h-4" />
@@ -571,15 +589,15 @@ const SmartAutomation = () => {
                         <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
                         <div className="flex items-center gap-2">
                           <code className="flex-1 px-2 py-1.5 bg-muted rounded text-xs truncate">
-                            {window.location.origin}/l/{expireLink.link?.short_code}
+                            {getSmartUrl(expireLink.link)}
                           </code>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0"
-                            onClick={() => copyToClipboard(expireLink.link?.short_code)}
+                            onClick={() => copyToClipboard(expireLink.link)}
                           >
-                            {copiedLink === expireLink.link?.short_code ? (
+                            {copiedLink === getSmartUrl(expireLink.link) ? (
                               <Check className="w-4 h-4 text-green-500" />
                             ) : (
                               <Copy className="w-4 h-4" />

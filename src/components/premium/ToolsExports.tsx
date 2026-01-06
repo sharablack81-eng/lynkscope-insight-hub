@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,16 @@ const ToolsExports = () => {
   const [qrGenerated, setQrGenerated] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const [exportDateRange, setExportDateRange] = useState("30");
+  const [merchantId, setMerchantId] = useState<string>("");
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setMerchantId(user?.id ?? ""));
+  }, []);
+
+  const getSmartUrl = (link: { id: string; url: string }) => {
+    const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}`;
+    return merchantId ? `${base}&mid=${merchantId}` : base;
+  };
 
   // Fetch real links from database
   const { data: links = [] } = useQuery({
@@ -39,10 +49,10 @@ const ToolsExports = () => {
       const link = links.find(l => l.id === selectedLink);
       if (!link) return;
 
-      const shortUrl = `${window.location.origin}/l/${link.short_code}`;
+      const smartUrl = getSmartUrl(link);
       
       // Generate QR code as data URL
-      const qrDataUrl = await QRCodeLib.toDataURL(shortUrl, {
+      const qrDataUrl = await QRCodeLib.toDataURL(smartUrl, {
         width: 512,
         margin: 2,
         color: {
@@ -81,11 +91,9 @@ const ToolsExports = () => {
     if (selectedLink) {
       const link = links.find(l => l.id === selectedLink);
       if (link) {
-        const shortUrl = `${window.location.origin}/l/${link.short_code}`;
-        navigator.clipboard.writeText(shortUrl);
+        const smartUrl = getSmartUrl(link);
+        navigator.clipboard.writeText(smartUrl);
         toast.success("Link copied to clipboard!");
-      }
-    }
   };
 
   const exportData = async (exportFormat: "pdf" | "csv") => {
@@ -331,6 +339,8 @@ const ToolsExports = () => {
     document.body.removeChild(link);
   };
 
+  const selectedLinkObj = links.find((l) => l.id === selectedLink);
+
   return (
     <div className="space-y-6">
       {/* QR Code Generator */}
@@ -399,7 +409,7 @@ const ToolsExports = () => {
 
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-4">
-                      {window.location.origin}/l/{links.find(l => l.id === selectedLink)?.short_code}
+                      {selectedLinkObj ? getSmartUrl(selectedLinkObj) : ""}
                     </p>
                     <div className="flex gap-3">
                       <Button onClick={downloadQR} variant="outline" className="flex-1">

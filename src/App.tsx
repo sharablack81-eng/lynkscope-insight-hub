@@ -72,9 +72,8 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
-          {/* Smart links (support both /l/:shortCode and legacy /:shortCode) */}
-          <Route path="/l/:shortCode/*" element={<Redirect />} />
-          <Route path="/:shortCode/*" element={<Redirect />} />
+          {/* Smart links (query-based redirects) */}
+          <Route path="/r" element={<Redirect />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
