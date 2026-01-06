@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Edit, Trash2, ExternalLink } from "lucide-react";
 import { Link } from "@/pages/Links";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LinkCardProps {
   link: Link;
@@ -54,11 +55,16 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onCopy(`${window.location.origin}/l/${(link as any).short_code}`)}
+            onClick={async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}`;
+              const smartUrl = user?.id ? `${base}&mid=${user.id}` : base;
+              onCopy(smartUrl);
+            }}
             className="text-xs text-primary hover:underline flex items-center gap-1"
           >
             <Copy className="w-3 h-3" />
-            Copy Short URL
+            Copy Smart Link
           </button>
         </div>
       </div>
