@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const Redirect = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleRedirect = async () => {
+    const handleRedirect = () => {
       // Read query params directly from window.location
       const params = new URLSearchParams(window.location.search);
       const encodedUrl = params.get("url");
@@ -33,16 +35,47 @@ const Redirect = () => {
         return;
       }
 
-      // Track the click (fire and forget - don't block redirect)
-      supabase.functions.invoke('track-click', {
-        body: { 
-          destinationUrl: decodedUrl,
-          linkId: linkId || undefined,
-          merchantId: merchantId || undefined
-        }
-      }).catch(err => console.error("Failed to track click:", err));
+      // Fire-and-forget tracking using sendBeacon or fetch with keepalive
+      const trackingPayload = JSON.stringify({
+        destinationUrl: decodedUrl,
+        linkId: linkId || null,
+        merchantId: merchantId || null
+      });
 
-      // Redirect immediately using window.location.replace
+      const trackingUrl = `${SUPABASE_URL}/functions/v1/track-click`;
+      
+      // Try sendBeacon first (most reliable for pre-navigation requests)
+      if (navigator.sendBeacon) {
+        const blob = new Blob([trackingPayload], { type: 'application/json' });
+        const beaconSent = navigator.sendBeacon(trackingUrl, blob);
+        if (!beaconSent) {
+          // Fallback to fetch with keepalive
+          fetch(trackingUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: trackingPayload,
+            keepalive: true
+          }).catch(() => {}); // Swallow errors - tracking is best-effort
+        }
+      } else {
+        // Fallback for browsers without sendBeacon
+        fetch(trackingUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: trackingPayload,
+          keepalive: true
+        }).catch(() => {});
+      }
+
+      // Redirect immediately - don't wait for tracking
       window.location.replace(decodedUrl);
     };
 
