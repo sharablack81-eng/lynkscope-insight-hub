@@ -94,6 +94,8 @@ const ToolsExports = () => {
         const smartUrl = getSmartUrl(link);
         navigator.clipboard.writeText(smartUrl);
         toast.success("Link copied to clipboard!");
+      }
+    }
   };
 
   const exportData = async (exportFormat: "pdf" | "csv") => {
