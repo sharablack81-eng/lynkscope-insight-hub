@@ -98,11 +98,14 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({} as any));
+    console.log('Received tracking request:', JSON.stringify(body));
 
     const shortCode = typeof body?.shortCode === "string" ? body.shortCode.trim() : "";
     const destinationUrl = typeof body?.url === "string" ? body.url.trim() : "";
     const linkIdRaw = typeof body?.linkId === "string" ? body.linkId.trim() : "";
     const merchantIdRaw = typeof body?.merchantId === "string" ? body.merchantId.trim() : (typeof body?.mid === "string" ? body.mid.trim() : "");
+
+    console.log('Parsed params:', { shortCode, destinationUrl, linkIdRaw, merchantIdRaw });
 
     const isUuid = (value: string) =>
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -153,7 +156,13 @@ serve(async (req) => {
       const merchantId = isUuid(merchantIdRaw) ? merchantIdRaw : null;
 
       // Always record a smart-link click event
-      const { error: smartClickError } = await supabaseClient
+      console.log('Inserting smart link click:', { 
+        destination_url: parsedUrl.toString(), 
+        merchant_id: merchantId, 
+        link_id: linkId 
+      });
+      
+      const { data: insertedData, error: smartClickError } = await supabaseClient
         .from('smart_link_clicks')
         .insert({
           destination_url: parsedUrl.toString(),
@@ -166,10 +175,13 @@ serve(async (req) => {
           device_type: deviceType,
           country,
           continent,
-        });
+        })
+        .select();
 
       if (smartClickError) {
         console.error('Error tracking smart link click:', smartClickError);
+      } else {
+        console.log('Successfully inserted smart link click:', insertedData);
       }
 
       // Optional: also log into existing per-link analytics when a valid link_id is provided

@@ -105,29 +105,46 @@ const Dashboard = () => {
 
       if (linksError) throw linksError;
 
-      // Fetch all clicks
+      // Fetch all link_clicks
       const { data: clicksData, error: clicksError } = await supabase
         .from('link_clicks')
         .select('*');
 
       if (clicksError) throw clicksError;
 
-      const totalClicks = clicksData?.length || 0;
+      // Also fetch smart_link_clicks for combined analytics
+      const { data: smartClicksData, error: smartClicksError } = await supabase
+        .from('smart_link_clicks')
+        .select('*');
+
+      if (smartClicksError) console.error('Error fetching smart clicks:', smartClicksError);
+
+      // Combine both click sources
+      const allClicks = [
+        ...(clicksData || []),
+        ...(smartClicksData || []).map(sc => ({
+          ...sc,
+          clicked_at: sc.clicked_at,
+          link_id: sc.link_id
+        }))
+      ];
+
+      const totalClicks = allClicks.length;
 
       // Calculate last 7 days clicks
       const now = new Date();
       const sevenDaysAgo = new Date(now);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const last7DaysClicks = clicksData?.filter(c => {
+      const last7DaysClicks = allClicks.filter(c => {
         const clickDate = new Date(c.clicked_at);
         return clickDate >= sevenDaysAgo;
-      }).length || 0;
+      }).length;
 
       // Calculate platform breakdown
       const platformCounts: Record<string, number> = {};
       for (const link of linksData || []) {
-        const linkClicks = clicksData?.filter(c => c.link_id === link.id).length || 0;
+        const linkClicks = allClicks.filter(c => c.link_id === link.id).length;
         platformCounts[link.platform] = (platformCounts[link.platform] || 0) + linkClicks;
       }
 
@@ -144,10 +161,10 @@ const Dashboard = () => {
       for (let i = 6; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        const dayClicks = clicksData?.filter(c => {
+        const dayClicks = allClicks.filter(c => {
           const clickDate = new Date(c.clicked_at);
           return clickDate.toDateString() === date.toDateString();
-        }).length || 0;
+        }).length;
         chartArray.push(dayClicks);
       }
 
