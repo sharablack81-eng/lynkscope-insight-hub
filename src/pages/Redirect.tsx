@@ -37,7 +37,7 @@ const Redirect = () => {
 
       // Fire-and-forget tracking using sendBeacon or fetch with keepalive
       const trackingPayload = JSON.stringify({
-        destinationUrl: decodedUrl,
+        url: decodedUrl,
         linkId: linkId || null,
         merchantId: merchantId || null
       });
