@@ -35,45 +35,23 @@ const Redirect = () => {
         return;
       }
 
-      // Fire-and-forget tracking using sendBeacon or fetch with keepalive
-      const trackingPayload = JSON.stringify({
-        url: decodedUrl,
-        linkId: linkId || null,
-        merchantId: merchantId || null
-      });
-
+      // Fire-and-forget tracking using fetch with keepalive (sendBeacon cannot include headers)
       const trackingUrl = `${SUPABASE_URL}/functions/v1/track-click`;
       
-      // Try sendBeacon first (most reliable for pre-navigation requests)
-      if (navigator.sendBeacon) {
-        const blob = new Blob([trackingPayload], { type: 'application/json' });
-        const beaconSent = navigator.sendBeacon(trackingUrl, blob);
-        if (!beaconSent) {
-          // Fallback to fetch with keepalive
-          fetch(trackingUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            },
-            body: trackingPayload,
-            keepalive: true
-          }).catch(() => {}); // Swallow errors - tracking is best-effort
-        }
-      } else {
-        // Fallback for browsers without sendBeacon
-        fetch(trackingUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          },
-          body: trackingPayload,
-          keepalive: true
-        }).catch(() => {});
-      }
+      fetch(trackingUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          url: decodedUrl,
+          linkId: linkId || null,
+          merchantId: merchantId || null
+        }),
+        keepalive: true
+      }).catch(() => {}); // Fire-and-forget, errors swallowed
 
       // Redirect immediately - don't wait for tracking
       window.location.replace(decodedUrl);
