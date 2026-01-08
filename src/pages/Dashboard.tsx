@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAggregatedAnalytics } from "@/lib/analytics";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -54,11 +55,6 @@ const Dashboard = () => {
     if (chargeId && userId) {
       try {
         // Confirm the charge via edge function
-        const { data, error } = await supabase.functions.invoke('shopify-billing', {
-          body: null,
-        });
-        
-        // Call with query params for confirmation
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-billing?action=confirm-charge&charge_id=${chargeId}&user_id=${userId}`
         );
@@ -98,101 +94,34 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch all links
-      const { data: linksData, error: linksError } = await supabase
-        .from('links')
-        .select('*');
-
-      if (linksError) throw linksError;
-
-      // Fetch all link_clicks
-      const { data: clicksData, error: clicksError } = await supabase
-        .from('link_clicks')
-        .select('*');
-
-      if (clicksError) throw clicksError;
-
-      // Also fetch smart_link_clicks for combined analytics
-      const { data: smartClicksData, error: smartClicksError } = await supabase
-        .from('smart_link_clicks')
-        .select('*');
-
-      if (smartClicksError) console.error('Error fetching smart clicks:', smartClicksError);
-
-      // Combine both click sources
-      const allClicks = [
-        ...(clicksData || []),
-        ...(smartClicksData || []).map(sc => ({
-          ...sc,
-          clicked_at: sc.clicked_at,
-          link_id: sc.link_id
-        }))
-      ];
-
-      const totalClicks = allClicks.length;
-
-      // Calculate last 7 days clicks
-      const now = new Date();
-      const sevenDaysAgo = new Date(now);
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const last7DaysClicks = allClicks.filter(c => {
-        const clickDate = new Date(c.clicked_at);
-        return clickDate >= sevenDaysAgo;
-      }).length;
-
-      // Calculate platform breakdown
-      const platformCounts: Record<string, number> = {};
-      for (const link of linksData || []) {
-        const linkClicks = allClicks.filter(c => c.link_id === link.id).length;
-        platformCounts[link.platform] = (platformCounts[link.platform] || 0) + linkClicks;
-      }
-
-      const topPlatform = Object.entries(platformCounts).length > 0
-        ? Object.entries(platformCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0]
-        : "N/A";
-
-      const topPlatformPercentage = totalClicks > 0 && topPlatform !== "N/A"
-        ? Math.round((platformCounts[topPlatform] / totalClicks) * 100)
-        : 0;
-
-      // Calculate chart data for last 7 days
-      const chartArray = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        const dayClicks = allClicks.filter(c => {
-          const clickDate = new Date(c.clicked_at);
-          return clickDate.toDateString() === date.toDateString();
-        }).length;
-        chartArray.push(dayClicks);
-      }
+      // Use unified analytics aggregation
+      const analytics = await getAggregatedAnalytics();
 
       setMetrics([
         {
           label: "Total Clicks",
-          value: totalClicks.toLocaleString(),
+          value: analytics.totalClicks.toLocaleString(),
           change: "+0%",
           trend: "neutral",
           icon: MousePointerClick
         },
         {
           label: "Top Platform",
-          value: topPlatform,
-          change: `${topPlatformPercentage}% of traffic`,
+          value: analytics.topPlatform,
+          change: `${analytics.topPlatformPercentage}% of traffic`,
           trend: "neutral",
           icon: TrendingUp
         },
         {
           label: "Last 7 Days",
-          value: last7DaysClicks.toLocaleString(),
+          value: analytics.clicksLast7Days.toLocaleString(),
           change: "+0%",
           trend: "neutral",
           icon: BarChart3
         }
       ]);
 
-      setChartData(chartArray);
+      setChartData(analytics.dailyClicks.map(d => d.clicks));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error("Failed to load dashboard data");

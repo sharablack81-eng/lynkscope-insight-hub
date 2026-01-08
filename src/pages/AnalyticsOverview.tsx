@@ -6,29 +6,15 @@ import {
   TrendingUp, 
   MousePointerClick, 
   Users, 
-  Globe,
-  BarChart3
+  Globe
 } from "lucide-react";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAggregatedAnalytics, type AggregatedAnalytics } from "@/lib/analytics";
 
 const AnalyticsOverview = () => {
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
   const [loading, setLoading] = useState(true);
-  const [overviewStats, setOverviewStats] = useState({
-    totalClicks: 0,
-    totalLinks: 0,
-    topPlatform: "N/A",
-    avgCTR: "0%"
-  });
-  const [engagementData, setEngagementData] = useState<any>({
-    '7d': [],
-    '30d': [],
-    '90d': []
-  });
-  const [platformData, setPlatformData] = useState<any[]>([]);
-  const [topLinks, setTopLinks] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<AggregatedAnalytics | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -36,114 +22,8 @@ const AnalyticsOverview = () => {
 
   const fetchAnalytics = async () => {
     try {
-      // Fetch all links for the user
-      const { data: linksData, error: linksError } = await supabase
-        .from('links')
-        .select('*');
-
-      if (linksError) throw linksError;
-
-      // Fetch all link_clicks
-      const { data: clicksData, error: clicksError } = await supabase
-        .from('link_clicks')
-        .select('*');
-
-      if (clicksError) throw clicksError;
-
-      // Also fetch smart_link_clicks for combined analytics
-      const { data: smartClicksData, error: smartClicksError } = await supabase
-        .from('smart_link_clicks')
-        .select('*');
-
-      if (smartClicksError) console.error('Error fetching smart clicks:', smartClicksError);
-
-      // Combine both click sources
-      const allClicks = [
-        ...(clicksData || []),
-        ...(smartClicksData || []).map(sc => ({
-          ...sc,
-          clicked_at: sc.clicked_at,
-          link_id: sc.link_id
-        }))
-      ];
-
-      // Calculate total clicks
-      const totalClicks = allClicks.length;
-
-      // Calculate platform breakdown
-      const platformCounts: Record<string, number> = {};
-      const platformColors: Record<string, string> = {
-        'TikTok': '#00F2EA',
-        'Instagram': '#E1306C',
-        'YouTube': '#FF0000',
-        'Other': '#888888'
-      };
-
-      for (const link of linksData || []) {
-        const linkClicks = allClicks.filter(c => c.link_id === link.id).length;
-        platformCounts[link.platform] = (platformCounts[link.platform] || 0) + linkClicks;
-      }
-
-      const platformArray = Object.entries(platformCounts).map(([name, value]) => ({
-        name,
-        value,
-        color: platformColors[name] || '#888888'
-      }));
-
-      // Top platform
-      const topPlatform = platformArray.length > 0 
-        ? platformArray.reduce((a, b) => a.value > b.value ? a : b).name 
-        : "N/A";
-
-      // Calculate top links
-      const linksWithClicks = await Promise.all(
-        (linksData || []).map(async (link) => {
-          const clicks = allClicks.filter(c => c.link_id === link.id).length;
-          return {
-            id: link.id,
-            title: link.title,
-            clicks,
-            platform: link.platform
-          };
-        })
-      );
-
-      const sortedLinks = linksWithClicks
-        .sort((a, b) => b.clicks - a.clicks)
-        .slice(0, 3);
-
-      // Calculate engagement over time
-      const now = new Date();
-      const engagement7d = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        const dayClicks = allClicks.filter(c => {
-          const clickDate = new Date(c.clicked_at);
-          return clickDate.toDateString() === date.toDateString();
-        }).length;
-        
-        engagement7d.push({
-          date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-          clicks: dayClicks
-        });
-      }
-
-      setOverviewStats({
-        totalClicks,
-        totalLinks: linksData?.length || 0,
-        topPlatform,
-        avgCTR: "0%"
-      });
-
-      setPlatformData(platformArray);
-      setTopLinks(sortedLinks);
-      setEngagementData({
-        '7d': engagement7d,
-        '30d': [],
-        '90d': []
-      });
-
+      const data = await getAggregatedAnalytics();
+      setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast.error("Failed to load analytics");
@@ -175,6 +55,16 @@ const AnalyticsOverview = () => {
     );
   }
 
+  if (!analytics) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-muted-foreground">Failed to load analytics</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="flex-1 flex flex-col">
@@ -195,22 +85,22 @@ const AnalyticsOverview = () => {
             <StatCard
               icon={MousePointerClick}
               title="Total Clicks"
-              value={overviewStats.totalClicks.toLocaleString()}
+              value={analytics.totalClicks.toLocaleString()}
             />
             <StatCard
               icon={Users}
               title="Total Links"
-              value={overviewStats.totalLinks}
+              value={analytics.topLinks.length}
             />
             <StatCard
               icon={Globe}
               title="Top Platform"
-              value={overviewStats.topPlatform}
+              value={analytics.topPlatform}
             />
             <StatCard
               icon={TrendingUp}
-              title="Avg CTR"
-              value={overviewStats.avgCTR}
+              title="Last 7 Days"
+              value={analytics.clicksLast7Days.toLocaleString()}
             />
           </div>
 
@@ -235,7 +125,7 @@ const AnalyticsOverview = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={engagementData['7d']}>
+                <LineChart data={analytics.dailyClicks}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis 
                     dataKey="date" 
@@ -273,11 +163,11 @@ const AnalyticsOverview = () => {
                 <CardDescription>Click distribution by platform</CardDescription>
               </CardHeader>
               <CardContent>
-                {platformData.length > 0 ? (
+                {analytics.platformBreakdown.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={platformData}
+                        data={analytics.platformBreakdown}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -286,7 +176,7 @@ const AnalyticsOverview = () => {
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {platformData.map((entry, index) => (
+                        {analytics.platformBreakdown.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -314,9 +204,9 @@ const AnalyticsOverview = () => {
                 <CardDescription>Your most clicked links</CardDescription>
               </CardHeader>
               <CardContent>
-                {topLinks.length > 0 ? (
+                {analytics.topLinks.length > 0 ? (
                   <div className="space-y-4">
-                    {topLinks.map((link, index) => (
+                    {analytics.topLinks.slice(0, 3).map((link, index) => (
                       <div
                         key={link.id}
                         className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border hover:border-primary/50 transition-all"

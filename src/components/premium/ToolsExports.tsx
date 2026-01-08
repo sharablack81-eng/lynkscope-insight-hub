@@ -11,6 +11,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, subDays } from "date-fns";
 import QRCodeLib from "qrcode";
+import { fetchClicksInRange, fetchUserLinks } from "@/lib/analytics";
 
 const ToolsExports = () => {
   const [selectedLink, setSelectedLink] = useState<string>("");
@@ -31,15 +32,7 @@ const ToolsExports = () => {
   // Fetch real links from database
   const { data: links = [] } = useQuery({
     queryKey: ["links"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("links")
-        .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: fetchUserLinks,
   });
 
   const generateQR = async () => {
@@ -106,53 +99,45 @@ const ToolsExports = () => {
       const daysBack = exportDateRange === "all" ? 3650 : parseInt(exportDateRange);
       const startDate = subDays(new Date(), daysBack);
 
-      // Fetch all analytics data
-      const { data: linksData, error: linksError } = await supabase
-        .from("links")
-        .select("*");
-
-      if (linksError) throw linksError;
-
-      const { data: clicksData, error: clicksError } = await supabase
-        .from("link_clicks")
-        .select("*")
-        .gte("clicked_at", startDate.toISOString());
-
-      if (clicksError) throw clicksError;
+      // Fetch data using unified analytics module
+      const [clicksData, linksData] = await Promise.all([
+        fetchClicksInRange(startDate),
+        fetchUserLinks()
+      ]);
 
       // Process analytics data
-      const totalClicks = clicksData?.length || 0;
+      const totalClicks = clicksData.length;
       
       // Geographic breakdown
-      const geoData = clicksData?.reduce((acc: any, click: any) => {
+      const geoData = clicksData.reduce((acc: Record<string, number>, click) => {
         const location = click.continent || "Unknown";
         acc[location] = (acc[location] || 0) + 1;
         return acc;
       }, {});
 
       // Device breakdown
-      const deviceData = clicksData?.reduce((acc: any, click: any) => {
+      const deviceData = clicksData.reduce((acc: Record<string, number>, click) => {
         const device = click.device_type || "Unknown";
         acc[device] = (acc[device] || 0) + 1;
         return acc;
       }, {});
 
       // Browser breakdown
-      const browserData = clicksData?.reduce((acc: any, click: any) => {
+      const browserData = clicksData.reduce((acc: Record<string, number>, click) => {
         const browser = click.browser || "Unknown";
         acc[browser] = (acc[browser] || 0) + 1;
         return acc;
       }, {});
 
       // Referrer breakdown
-      const referrerData = clicksData?.reduce((acc: any, click: any) => {
+      const referrerData = clicksData.reduce((acc: Record<string, number>, click) => {
         const referrer = click.referrer || "Direct";
         acc[referrer] = (acc[referrer] || 0) + 1;
         return acc;
       }, {});
 
       // Time-based trends (daily)
-      const dailyClicks = clicksData?.reduce((acc: any, click: any) => {
+      const dailyClicks = clicksData.reduce((acc: Record<string, number>, click) => {
         const date = format(new Date(click.clicked_at), "yyyy-MM-dd");
         acc[date] = (acc[date] || 0) + 1;
         return acc;
@@ -161,7 +146,7 @@ const ToolsExports = () => {
       if (exportFormat === "pdf") {
         exportPDF({
           totalClicks,
-          linksData: linksData || [],
+          linksData,
           geoData,
           deviceData,
           browserData,
@@ -171,8 +156,8 @@ const ToolsExports = () => {
         });
       } else {
         exportCSV({
-          clicksData: clicksData || [],
-          linksData: linksData || [],
+          clicksData,
+          linksData,
         });
       }
 
@@ -306,7 +291,7 @@ const ToolsExports = () => {
       ["LynkScope Analytics Export"],
       [`Generated: ${format(new Date(), "PPpp")}`],
       [],
-      ["Click ID", "Link Title", "Short Code", "Clicked At", "Country", "Continent", "Device Type", "Browser", "Referrer", "IP Address"],
+      ["Click ID", "Link Title", "Short Code", "Clicked At", "Country", "Continent", "Device Type", "Browser", "Referrer", "Destination URL"],
     ];
 
     // Add click data rows
@@ -322,7 +307,7 @@ const ToolsExports = () => {
         click.device_type || "Unknown",
         click.browser || "Unknown",
         click.referrer || "Direct",
-        click.ip_address || "Unknown",
+        click.destination_url || "Unknown",
       ]);
     });
 
@@ -500,11 +485,11 @@ const ToolsExports = () => {
             <div className="premium-card p-4 rounded-xl border border-primary/20">
               <h4 className="font-medium mb-2">Export includes:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Click analytics and metrics</li>
-                <li>• Geographic data</li>
-                <li>• Device and browser breakdown</li>
+                <li>• Total clicks and link statistics</li>
+                <li>• Geographic breakdown by continent</li>
+                <li>• Device and browser analytics</li>
                 <li>• Referrer information</li>
-                <li>• Time-based trends</li>
+                <li>• Daily click trends</li>
               </ul>
             </div>
           </CardContent>

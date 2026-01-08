@@ -7,7 +7,7 @@ const Redirect = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleRedirect = () => {
+    const handleRedirect = async () => {
       // Read query params directly from window.location
       const params = new URLSearchParams(window.location.search);
       const encodedUrl = params.get("url");
@@ -35,38 +35,54 @@ const Redirect = () => {
         return;
       }
 
-      // Fire-and-forget tracking using fetch with keepalive (sendBeacon cannot include headers)
+      // Fire-and-forget tracking using fetch with keepalive
       const trackingUrl = `${SUPABASE_URL}/functions/v1/track-click`;
       
-      fetch(trackingUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          url: decodedUrl,
-          linkId: linkId || null,
-          merchantId: merchantId || null
-        }),
-        keepalive: true
-      }).catch(() => {}); // Fire-and-forget, errors swallowed
+      try {
+        const response = await fetch(trackingUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            url: decodedUrl,
+            linkId: linkId || null,
+            merchantId: merchantId || null
+          }),
+          keepalive: true
+        });
 
-      // Redirect immediately - don't wait for tracking
+        // Check if link is expired (410 Gone)
+        if (response.status === 410) {
+          const data = await response.json();
+          setError(data.error || "This link has expired");
+          return;
+        }
+      } catch {
+        // Tracking failed, but we still redirect
+        console.warn('Tracking request failed, proceeding with redirect');
+      }
+
+      // Redirect
       window.location.replace(decodedUrl);
     };
 
     handleRedirect();
   }, []);
 
-  // Show error if URL is missing or invalid
+  // Show error if URL is missing, invalid, or link expired
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center p-6">
           <div className="text-destructive text-4xl mb-4">⚠️</div>
-          <h1 className="text-xl font-semibold text-foreground mb-2">Invalid Link</h1>
+          <h1 className="text-xl font-semibold text-foreground mb-2">
+            {error.includes("expired") || error.includes("inactive") || error.includes("maximum") 
+              ? "Link Unavailable" 
+              : "Invalid Link"}
+          </h1>
           <p className="text-muted-foreground">{error}</p>
         </div>
       </div>
