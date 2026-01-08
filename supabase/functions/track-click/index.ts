@@ -65,11 +65,8 @@ const getLocationFromLanguage = (acceptLanguage: string | null): { country: stri
   const defaultLocation = { country: 'United States', continent: 'North America' };
   
   if (!acceptLanguage) {
-    console.log('No Accept-Language header, using default location');
     return defaultLocation;
   }
-  
-  console.log('Accept-Language header:', acceptLanguage);
   
   // Parse Accept-Language header (e.g., "en-US,en;q=0.9" or "es-MX")
   const languages = acceptLanguage.split(',').map(l => l.split(';')[0].trim());
@@ -79,20 +76,17 @@ const getLocationFromLanguage = (acceptLanguage: string | null): { country: stri
     const parts = lang.split('-');
     if (parts.length === 2) {
       const countryCode = parts[1].toUpperCase();
-      console.log('Checking country code:', countryCode);
       if (countryToContinent[countryCode]) {
-        console.log('Found location:', countryToContinent[countryCode]);
         return countryToContinent[countryCode];
       }
     }
   }
   
-  console.log('No matching country code found, using default location');
   return defaultLocation;
 };
 
 serve(async (req) => {
-  console.log('TRACK CLICK HIT - Method:', req.method);
+  console.log('TRACK CLICK - Method:', req.method);
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -100,14 +94,12 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({} as any));
-    console.log('TRACK CLICK BODY:', JSON.stringify(body));
+    console.log('TRACK CLICK - Body:', JSON.stringify(body));
 
     const shortCode = typeof body?.shortCode === "string" ? body.shortCode.trim() : "";
     const destinationUrl = typeof body?.url === "string" ? body.url.trim() : "";
     const linkIdRaw = typeof body?.linkId === "string" ? body.linkId.trim() : "";
     const merchantIdRaw = typeof body?.merchantId === "string" ? body.merchantId.trim() : (typeof body?.mid === "string" ? body.mid.trim() : "");
-
-    console.log('Parsed params:', { shortCode, destinationUrl, linkIdRaw, merchantIdRaw });
 
     const isUuid = (value: string) =>
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -125,10 +117,10 @@ serve(async (req) => {
     const acceptLanguage = req.headers.get('accept-language');
     const { country, continent } = getLocationFromLanguage(acceptLanguage);
 
-    // Keep IP for logging purposes but don't use for geolocation
+    // Keep IP for logging purposes
     const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
 
-    // --- Query-parameter redirect mode (no DB lookup required) ---
+    // --- Query-parameter redirect mode ---
     if (destinationUrl) {
       if (destinationUrl.length > 4096) {
         return new Response(
@@ -157,7 +149,54 @@ serve(async (req) => {
       const linkId = isUuid(linkIdRaw) ? linkIdRaw : null;
       const merchantId = isUuid(merchantIdRaw) ? merchantIdRaw : null;
 
-      // Always record a smart-link click event
+      // Check for expiration if linkId is provided
+      if (linkId) {
+        const { data: expireLink } = await supabaseClient
+          .from('expire_links')
+          .select('*')
+          .eq('link_id', linkId)
+          .single();
+
+        if (expireLink) {
+          // Check if link is toggled off
+          if (!expireLink.is_active) {
+            console.log('Link is inactive:', linkId);
+            return new Response(
+              JSON.stringify({ error: 'Link is inactive', expired: true }),
+              { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Check time-based or day-based expiry
+          if ((expireLink.expire_type === 'time-based' || expireLink.expire_type === 'day-based') && expireLink.expires_at) {
+            if (new Date(expireLink.expires_at) < new Date()) {
+              console.log('Link has expired (time/day):', linkId);
+              return new Response(
+                JSON.stringify({ error: 'Link has expired', expired: true }),
+                { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+
+          // Check click-based expiry - count from smart_link_clicks (single source of truth)
+          if (expireLink.expire_type === 'click-based' && expireLink.max_clicks) {
+            const { count } = await supabaseClient
+              .from('smart_link_clicks')
+              .select('*', { count: 'exact', head: true })
+              .eq('link_id', linkId);
+
+            if (count && count >= expireLink.max_clicks) {
+              console.log('Link has reached max clicks:', linkId, count, '/', expireLink.max_clicks);
+              return new Response(
+                JSON.stringify({ error: 'Link has reached maximum clicks', expired: true }),
+                { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+        }
+      }
+
+      // SINGLE INSERT: Only insert into smart_link_clicks (single source of truth)
       console.log('Inserting smart link click:', { 
         destination_url: parsedUrl.toString(), 
         merchant_id: merchantId, 
@@ -183,28 +222,10 @@ serve(async (req) => {
       if (smartClickError) {
         console.error('Error tracking smart link click:', smartClickError);
       } else {
-        console.log('Successfully inserted smart link click:', insertedData);
+        console.log('Successfully inserted smart link click:', insertedData?.[0]?.id);
       }
 
-      // Optional: also log into existing per-link analytics when a valid link_id is provided
-      if (linkId) {
-        const { error: clickError } = await supabaseClient
-          .from('link_clicks')
-          .insert({
-            link_id: linkId,
-            referrer: req.headers.get('referer'),
-            user_agent: userAgent,
-            ip_address: ipAddress,
-            browser,
-            device_type: deviceType,
-            country,
-            continent,
-          });
-
-        if (clickError) {
-          console.error('Error tracking click:', clickError);
-        }
-      }
+      // NO DOUBLE INSERT - removed link_clicks insert to prevent double-counting
 
       return new Response(
         JSON.stringify({ url: parsedUrl.toString() }),
@@ -212,7 +233,7 @@ serve(async (req) => {
       );
     }
 
-    // --- Legacy short-code mode ---
+    // --- Legacy short-code mode (deprecated but kept for backwards compatibility) ---
     if (!shortCode) {
       return new Response(
         JSON.stringify({ error: 'Missing shortCode or url' }),
@@ -246,7 +267,7 @@ serve(async (req) => {
       // Check if link is toggled off
       if (!expireLink.is_active) {
         return new Response(
-          JSON.stringify({ error: 'Link is inactive' }),
+          JSON.stringify({ error: 'Link is inactive', expired: true }),
           { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -255,33 +276,35 @@ serve(async (req) => {
       if ((expireLink.expire_type === 'time-based' || expireLink.expire_type === 'day-based') && expireLink.expires_at) {
         if (new Date(expireLink.expires_at) < new Date()) {
           return new Response(
-            JSON.stringify({ error: 'Link has expired' }),
+            JSON.stringify({ error: 'Link has expired', expired: true }),
             { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       }
 
-      // Check click-based expiry
+      // Check click-based expiry - use smart_link_clicks as source of truth
       if (expireLink.expire_type === 'click-based' && expireLink.max_clicks) {
         const { count } = await supabaseClient
-          .from('link_clicks')
+          .from('smart_link_clicks')
           .select('*', { count: 'exact', head: true })
           .eq('link_id', link.id);
 
         if (count && count >= expireLink.max_clicks) {
           return new Response(
-            JSON.stringify({ error: 'Link has reached maximum clicks' }),
+            JSON.stringify({ error: 'Link has reached maximum clicks', expired: true }),
             { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       }
     }
 
-    // Track the click
-    const { error: legacyClickError } = await supabaseClient
-      .from('link_clicks')
+    // Track the click in smart_link_clicks (single source of truth)
+    const { error: clickError } = await supabaseClient
+      .from('smart_link_clicks')
       .insert({
+        destination_url: link.url,
         link_id: link.id,
+        merchant_id: link.user_id,
         referrer: req.headers.get('referer'),
         user_agent: userAgent,
         ip_address: ipAddress,
@@ -291,8 +314,8 @@ serve(async (req) => {
         continent,
       });
 
-    if (legacyClickError) {
-      console.error('Error tracking click:', legacyClickError);
+    if (clickError) {
+      console.error('Error tracking click:', clickError);
     }
 
     return new Response(

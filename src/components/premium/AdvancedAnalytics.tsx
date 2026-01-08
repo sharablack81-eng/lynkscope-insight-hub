@@ -4,104 +4,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Activity, Users, Globe, Smartphone, Monitor, TabletSmartphone } from "lucide-react";
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { WorldMap } from "./WorldMap";
+import { fetchAllClicks, fetchUserLinks, aggregateAnalytics } from "@/lib/analytics";
 
 const AdvancedAnalytics = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Fetch link clicks data
-  const { data: clicksData } = useQuery({
-    queryKey: ['link-clicks-analytics'],
+  // Fetch data using unified analytics module
+  const { data: analyticsData } = useQuery({
+    queryKey: ['advanced-analytics'],
     queryFn: async () => {
-      const { data: links } = await supabase
-        .from('links')
-        .select('id, title');
-      
-      const { data: clicks } = await supabase
-        .from('link_clicks')
-        .select('link_id, browser, device_type, clicked_at, continent, country');
-      
-      return { links: links || [], clicks: clicks || [] };
+      const [clicks, links] = await Promise.all([
+        fetchAllClicks(),
+        fetchUserLinks()
+      ]);
+      return { clicks, links, aggregated: aggregateAnalytics(clicks, links) };
     },
     refetchInterval: autoRefresh ? 3000 : false
   });
 
   const liveData = {
-    totalClicks: clicksData?.clicks.length || 0,
-    activeUsers: clicksData?.clicks.filter(c => {
+    totalClicks: analyticsData?.aggregated.totalClicks || 0,
+    activeUsers: analyticsData?.clicks.filter(c => {
       const clickTime = new Date(c.clicked_at).getTime();
       const now = Date.now();
       return now - clickTime < 300000; // Last 5 minutes
     }).length || 0,
     topLink: (() => {
-      if (!clicksData?.clicks.length) return "No clicks yet";
-      const linkCounts: Record<string, number> = {};
-      clicksData.clicks.forEach(c => {
-        linkCounts[c.link_id] = (linkCounts[c.link_id] || 0) + 1;
-      });
-      const topLinkId = Object.entries(linkCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-      return clicksData.links.find(l => l.id === topLinkId)?.title || "N/A";
+      if (!analyticsData?.aggregated.topLinks.length) return "No clicks yet";
+      return analyticsData.aggregated.topLinks[0]?.title || "N/A";
     })()
   };
 
-  // Process geographic data by continent
-  const geoData = (() => {
-    if (!clicksData?.clicks.length) return [];
-    
-    const continents = clicksData.clicks.reduce((acc: Record<string, number>, click: any) => {
-      const continent = click.continent || 'Unknown';
-      acc[continent] = (acc[continent] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(continents)
-      .map(([continent, clicks]) => ({ continent, clicks: clicks as number }))
-      .sort((a, b) => b.clicks - a.clicks);
-  })();
-
-  // Process device data
-  const deviceData = (() => {
-    if (!clicksData?.clicks.length) return [];
-    
-    const devices = clicksData.clicks.reduce((acc, click) => {
-      const type = click.device_type || 'Unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const total = Object.values(devices).reduce((a, b) => a + b, 0);
-    const colors: Record<string, string> = {
-      'Desktop': '#8B5CF6',
-      'Mobile': '#A78BFA',
-      'Tablet': '#C4B5FD',
-      'Unknown': '#6B7280'
-    };
-
-    return Object.entries(devices).map(([name, count]) => ({
-      name,
-      value: Math.round((count / total) * 100),
-      count,
-      color: colors[name] || '#6B7280'
-    }));
-  })();
-
-  // Process browser data
-  const browserData = (() => {
-    if (!clicksData?.clicks.length) return [];
-    
-    const browsers = clicksData.clicks.reduce((acc, click) => {
-      const browser = click.browser || 'Unknown';
-      acc[browser] = (acc[browser] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(browsers)
-      .map(([name, clicks]) => ({ name, clicks }))
-      .sort((a, b) => b.clicks - a.clicks);
-  })();
+  const geoData = analyticsData?.aggregated.continentBreakdown || [];
+  const deviceData = analyticsData?.aggregated.deviceBreakdown || [];
+  const browserData = analyticsData?.aggregated.browserBreakdown || [];
 
   return (
     <div className="space-y-6">

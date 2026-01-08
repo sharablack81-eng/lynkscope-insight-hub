@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { TestTube, Clock, Plus, TrendingUp, TrendingDown, Copy, Check } from "lucide-react";
+import { TestTube, Clock, Plus, TrendingUp, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateABTestDialog from "./CreateABTestDialog";
 import CreateExpireLinkDialog from "./CreateExpireLinkDialog";
+import { getClickCountForLink } from "@/lib/analytics";
 
 const SmartAutomation = () => {
   const [abTests, setAbTests] = useState<any[]>([]);
@@ -74,31 +75,24 @@ const SmartAutomation = () => {
 
       if (testsError) throw testsError;
 
-      // Fetch click data for each test
+      // Fetch click data for each test using unified analytics
       const enrichedTests = await Promise.all(
         (testsData || []).map(async (test) => {
-          const { data: clicksA } = await supabase
-            .from("link_clicks")
-            .select("*")
-            .eq("link_id", test.variant_a_id);
+          const [clicksACount, clicksBCount] = await Promise.all([
+            getClickCountForLink(test.variant_a_id),
+            getClickCountForLink(test.variant_b_id)
+          ]);
 
-          const { data: clicksB } = await supabase
-            .from("link_clicks")
-            .select("*")
-            .eq("link_id", test.variant_b_id);
-
-          const clicksACount = clicksA?.length || 0;
-          const clicksBCount = clicksB?.length || 0;
           const totalClicks = clicksACount + clicksBCount;
 
-          const conversionsA = clicksA?.filter(c => c.converted).length || 0;
-          const conversionsB = clicksB?.filter(c => c.converted).length || 0;
-
+          // CTR is percentage of total clicks each variant gets
           const ctrA = totalClicks > 0 ? (clicksACount / totalClicks) * 100 : 0;
           const ctrB = totalClicks > 0 ? (clicksBCount / totalClicks) * 100 : 0;
 
-          const conversionRateA = clicksACount > 0 ? (conversionsA / clicksACount) * 100 : 0;
-          const conversionRateB = clicksBCount > 0 ? (conversionsB / clicksBCount) * 100 : 0;
+          // Note: conversion tracking would need additional implementation
+          // For now, using click counts as primary metric
+          const conversionA = 0;
+          const conversionB = 0;
 
           return {
             ...test,
@@ -106,8 +100,8 @@ const SmartAutomation = () => {
             clicksB: clicksBCount,
             ctrA: Number(ctrA.toFixed(1)),
             ctrB: Number(ctrB.toFixed(1)),
-            conversionA: Number(conversionRateA.toFixed(1)),
-            conversionB: Number(conversionRateB.toFixed(1)),
+            conversionA,
+            conversionB,
           };
         })
       );
@@ -138,9 +132,30 @@ const SmartAutomation = () => {
     }
   };
 
+  /**
+   * Determine A/B test winner using priority:
+   * 1. Higher CTR (click-through rate)
+   * 2. If CTR is equal, use higher conversion rate
+   * 3. If both equal, use higher total clicks
+   */
+  const determineWinner = (test: any): "A" | "B" => {
+    // Priority 1: CTR
+    if (test.ctrA !== test.ctrB) {
+      return test.ctrA > test.ctrB ? "A" : "B";
+    }
+    
+    // Priority 2: Conversion rate
+    if (test.conversionA !== test.conversionB) {
+      return test.conversionA > test.conversionB ? "A" : "B";
+    }
+    
+    // Priority 3: Total clicks
+    return test.clicksA >= test.clicksB ? "A" : "B";
+  };
+
   const handleEndTest = async (testId: string, test: any) => {
     try {
-      const winner = test.conversionB > test.conversionA ? "B" : "A";
+      const winner = determineWinner(test);
 
       const { error } = await supabase
         .from("ab_tests")
@@ -184,17 +199,10 @@ const SmartAutomation = () => {
 
       if (expireLinksError) throw expireLinksError;
 
-      // Enrich with click data
+      // Enrich with click data using unified analytics
       const enrichedExpireLinks = await Promise.all(
         (expireLinksData || []).map(async (expireLink) => {
-          const { data: clicks } = await supabase
-            .from("link_clicks")
-            .select("*")
-            .eq("link_id", expireLink.link_id);
-
-          const clickCount = clicks?.length || 0;
-          const conversions = clicks?.filter(c => c.converted).length || 0;
-          const conversionRate = clickCount > 0 ? (conversions / clickCount) * 100 : 0;
+          const clickCount = await getClickCountForLink(expireLink.link_id);
 
           // Check if expired
           let isExpired = false;
@@ -207,8 +215,8 @@ const SmartAutomation = () => {
           return {
             ...expireLink,
             clickCount,
-            conversions,
-            conversionRate: Number(conversionRate.toFixed(1)),
+            conversions: 0, // Would need additional tracking
+            conversionRate: 0,
             isExpired,
           };
         })
@@ -268,39 +276,9 @@ const SmartAutomation = () => {
     fetchExpireLinks();
   }, []);
 
-  const [expiringLinks, setExpiringLinks] = useState([
-    {
-      id: 1,
-      name: "flash-sale-2024",
-      url: "example.com/flash-sale",
-      expireType: "clicks",
-      maxClicks: 1000,
-      currentClicks: 742,
-      enabled: true,
-    },
-    {
-      id: 2,
-      name: "limited-offer",
-      url: "example.com/limited",
-      expireType: "time",
-      expiryDate: "2024-12-31",
-      daysLeft: 14,
-      enabled: true,
-    },
-    {
-      id: 3,
-      name: "beta-access",
-      url: "example.com/beta",
-      expireType: "clicks",
-      maxClicks: 500,
-      currentClicks: 423,
-      enabled: false,
-    },
-  ]);
-
   const getWinner = (test: typeof abTests[0]) => {
     if (test.status !== "ended") return null;
-    return test.conversionB > test.conversionA ? "B" : "A";
+    return test.winner_variant || determineWinner(test);
   };
 
   return (
@@ -393,10 +371,6 @@ const SmartAutomation = () => {
                             <TrendingUp className="w-3 h-3 text-green-500" />
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Conversion</span>
-                          <span className="font-semibold">{test.conversionA}%</span>
-                        </div>
                       </div>
                       <div className="mt-4 pt-3 border-t border-border">
                         <p className="text-xs text-muted-foreground mb-2">Share this link:</p>
@@ -439,10 +413,6 @@ const SmartAutomation = () => {
                             {test.ctrB}%
                             <TrendingUp className="w-3 h-3 text-green-500" />
                           </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Conversion</span>
-                          <span className="font-semibold">{test.conversionB}%</span>
                         </div>
                       </div>
                       <div className="mt-4 pt-3 border-t border-border">
@@ -547,18 +517,14 @@ const SmartAutomation = () => {
                     </div>
 
                     <div className="space-y-3">
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground block mb-1">Total Clicks</span>
                           <span className="font-semibold">{expireLink.clickCount}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground block mb-1">Conversions</span>
-                          <span className="font-semibold">{expireLink.conversions}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground block mb-1">Conv. Rate</span>
-                          <span className="font-semibold">{expireLink.conversionRate}%</span>
+                          <span className="text-muted-foreground block mb-1">Status</span>
+                          <span className="font-semibold">{expireLink.isExpired ? "Expired" : "Active"}</span>
                         </div>
                       </div>
 
