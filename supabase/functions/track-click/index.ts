@@ -92,13 +92,15 @@ const getLocationFromLanguage = (acceptLanguage: string | null): { country: stri
 };
 
 serve(async (req) => {
+  console.log('TRACK CLICK HIT - Method:', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const body = await req.json().catch(() => ({} as any));
-    console.log('Received tracking request:', JSON.stringify(body));
+    console.log('TRACK CLICK BODY:', JSON.stringify(body));
 
     const shortCode = typeof body?.shortCode === "string" ? body.shortCode.trim() : "";
     const destinationUrl = typeof body?.url === "string" ? body.url.trim() : "";
