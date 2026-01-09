@@ -43,11 +43,11 @@ const Links = () => {
 
       if (linksError) throw linksError;
 
-      // Fetch click counts for each link
+      // Fetch click counts from smart_link_clicks (single source of truth)
       const linksWithClicks = await Promise.all(
         (linksData || []).map(async (link) => {
           const { count } = await supabase
-            .from('link_clicks')
+            .from('smart_link_clicks')
             .select('*', { count: 'exact', head: true })
             .eq('link_id', link.id);
 
