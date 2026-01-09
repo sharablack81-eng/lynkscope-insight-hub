@@ -18,15 +18,10 @@ const ToolsExports = () => {
   const [qrGenerated, setQrGenerated] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const [exportDateRange, setExportDateRange] = useState("30");
-  const [merchantId, setMerchantId] = useState<string>("");
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setMerchantId(user?.id ?? ""));
-  }, []);
-
-  const getSmartUrl = (link: { id: string; url: string }) => {
-    const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}`;
-    return merchantId ? `${base}&mid=${merchantId}` : base;
+  // Use link.user_id (the link OWNER) for merchant attribution, NOT the current user
+  const getSmartUrl = (link: { id: string; url: string; user_id: string }) => {
+    return `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}&mid=${link.user_id}`;
   };
 
   // Fetch real links from database
