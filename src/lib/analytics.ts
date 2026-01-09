@@ -38,6 +38,7 @@ export interface LinkData {
 
 export interface AggregatedAnalytics {
   totalClicks: number;
+  totalLinks: number;
   clicksLast7Days: number;
   clicksLast30Days: number;
   topPlatform: string;
@@ -255,6 +256,7 @@ export function aggregateAnalytics(clicks: ClickData[], links: LinkData[]): Aggr
 
   return {
     totalClicks,
+    totalLinks: links.length,
     clicksLast7Days,
     clicksLast30Days,
     topPlatform,
