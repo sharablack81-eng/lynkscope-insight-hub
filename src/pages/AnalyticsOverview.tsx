@@ -90,7 +90,7 @@ const AnalyticsOverview = () => {
             <StatCard
               icon={Users}
               title="Total Links"
-              value={analytics.topLinks.length}
+              value={analytics.totalLinks}
             />
             <StatCard
               icon={Globe}
