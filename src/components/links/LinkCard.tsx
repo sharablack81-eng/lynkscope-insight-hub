@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Edit, Trash2, ExternalLink } from "lucide-react";
 import { Link } from "@/pages/Links";
-import { supabase } from "@/integrations/supabase/client";
 
 interface LinkCardProps {
   link: Link;
@@ -55,10 +54,9 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={async () => {
-              const { data: { user } } = await supabase.auth.getUser();
-              const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}`;
-              const smartUrl = user?.id ? `${base}&mid=${user.id}` : base;
+            onClick={() => {
+              // Use link.user_id (the link OWNER) for merchant attribution, NOT the current user
+              const smartUrl = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}&mid=${link.user_id}`;
               onCopy(smartUrl);
             }}
             className="text-xs text-primary hover:underline flex items-center gap-1"

@@ -20,6 +20,7 @@ export interface Link {
   clicks: number;
   createdAt: string;
   short_code: string;
+  user_id: string;
 }
 
 const Links = () => {
@@ -58,6 +59,7 @@ const Links = () => {
             clicks: count || 0,
             createdAt: link.created_at.split('T')[0],
             short_code: link.short_code,
+            user_id: link.user_id,
           };
         })
       );

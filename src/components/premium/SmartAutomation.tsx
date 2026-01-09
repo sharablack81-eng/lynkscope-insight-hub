@@ -20,13 +20,13 @@ const SmartAutomation = () => {
   const [isExpireLinkDialogOpen, setIsExpireLinkDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [merchantId, setMerchantId] = useState<string>("");
   const { toast } = useToast();
 
-  const getSmartUrl = (link?: { id?: string; url?: string } | null) => {
-    if (!link?.url) return "";
+  // Use link.user_id (the link OWNER) for merchant attribution, NOT the current user
+  const getSmartUrl = (link?: { id?: string; url?: string; user_id?: string } | null) => {
+    if (!link?.url || !link?.user_id) return "";
     const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}${link.id ? `&linkId=${link.id}` : ""}`;
-    return merchantId ? `${base}&mid=${merchantId}` : base;
+    return `${base}&mid=${link.user_id}`;
   };
 
   const copyToClipboard = async (link?: { id?: string; url?: string } | null) => {
@@ -270,7 +270,6 @@ const SmartAutomation = () => {
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setMerchantId(user?.id ?? ""));
     fetchABTests();
     fetchLinks();
     fetchExpireLinks();
