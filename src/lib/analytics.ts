@@ -67,6 +67,22 @@ const deviceColors: Record<string, string> = {
 };
 
 /**
+ * Normalize platform name to canonical form (handles case variations)
+ */
+function normalizePlatformName(platform: string): string {
+  const normalized = platform.toLowerCase().trim();
+  const platformMap: Record<string, string> = {
+    'tiktok': 'TikTok',
+    'instagram': 'Instagram',
+    'youtube': 'YouTube',
+    'twitter': 'Twitter',
+    'x': 'Twitter',
+    'other': 'Other'
+  };
+  return platformMap[normalized] || platform;
+}
+
+/**
  * Fetch all clicks from smart_link_clicks table (single source of truth)
  */
 export async function fetchAllClicks(): Promise<ClickData[]> {
@@ -172,11 +188,12 @@ export function aggregateAnalytics(clicks: ClickData[], links: LinkData[]): Aggr
   // Clicks in last 30 days
   const clicksLast30Days = clicks.filter(c => new Date(c.clicked_at) >= thirtyDaysAgo).length;
 
-  // Platform breakdown
+  // Platform breakdown (normalize platform names to prevent duplicates)
   const platformCounts: Record<string, number> = {};
   for (const link of links) {
     const linkClicks = clicks.filter(c => c.link_id === link.id).length;
-    platformCounts[link.platform] = (platformCounts[link.platform] || 0) + linkClicks;
+    const normalizedPlatform = normalizePlatformName(link.platform);
+    platformCounts[normalizedPlatform] = (platformCounts[normalizedPlatform] || 0) + linkClicks;
   }
 
   const platformBreakdown = Object.entries(platformCounts).map(([name, value]) => ({
