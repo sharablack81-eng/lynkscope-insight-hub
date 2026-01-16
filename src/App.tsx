@@ -93,6 +93,7 @@ const App = () => {
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+    )
       {/* Legal Footer */}
       <footer style={{ marginTop: '60px', padding: '20px', textAlign: 'center', borderTop: '1px solid #e5e5e5' }}>
         <Link to="/PrivacyPolicy" style={{ margin: '0 15px', textDecoration: 'underline' }}>
