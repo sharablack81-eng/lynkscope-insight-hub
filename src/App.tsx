@@ -18,6 +18,8 @@ import AdvancedAnalytics from "./pages/AdvancedAnalytics";
 import NotFound from "./pages/NotFound";
 import Redirect from "./pages/Redirect";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +77,8 @@ const App = () => {
           {/* Smart links (query-based redirects) */}
           <Route path="/r" element={<Redirect />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+           <Route path="privacy-policy" element={<PrivacyPolicy  />} />
+          <Route path="terms-of-service" element={<TermsOfService  />} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
           <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
