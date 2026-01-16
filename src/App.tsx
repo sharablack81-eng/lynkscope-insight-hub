@@ -97,7 +97,6 @@ const App = () => {
           Terms of Service
         </Link>
       </footer> 
-        </Routes>
           {/* Routes configured above */}
           <Route path="*" element={<NotFound />} />
         </Routes>
