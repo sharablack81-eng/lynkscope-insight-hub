@@ -67,6 +67,16 @@ const App = () => {
 
   return (
     <>
+         {/* Legal Footer */}
+      <footer style={{ marginTop: '60px', padding: '20px', textAlign: 'center', borderTop: '1px solid #e5e5e5' }}>
+        <Link to="/PrivacyPolicy" style={{ margin: '0 15px', textDecoration: 'underline' }}>
+          Privacy Policy
+        </Link>
+        <Link to="/TermsOfService" style={{ margin: '0 15px', textDecoration: 'underline' }}>
+          Terms of Service
+        </Link>
+      </footer> 
+    </>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -88,15 +98,6 @@ const App = () => {
           <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
           <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
           <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
-            {/* Legal Footer */}
-      <footer style={{ marginTop: '60px', padding: '20px', textAlign: 'center', borderTop: '1px solid #e5e5e5' }}>
-        <Link to="/PrivacyPolicy" style={{ margin: '0 15px', textDecoration: 'underline' }}>
-          Privacy Policy
-        </Link>
-        <Link to="/TermsOfService" style={{ margin: '0 15px', textDecoration: 'underline' }}>
-          Terms of Service
-        </Link>
-      </footer> 
           {/* Routes configured above */}
           <Route path="*" element={<NotFound />} />
         </Routes>
