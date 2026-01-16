@@ -66,6 +66,7 @@ const App = () => {
   }, []);
 
   return (
+    <>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -96,6 +97,7 @@ const App = () => {
           Terms of Service
         </Link>
       </footer> 
+      </>
           {/* Routes configured above */}
           <Route path="*" element={<NotFound />} />
         </Routes>
