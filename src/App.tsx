@@ -101,8 +101,7 @@ const App = () => {
         <Link to="/TermsOfService" style={{ margin: '0 15px', textDecoration: 'underline' }}>
           Terms of Service
         </Link>
-      </footer>
-    
+      </footer> 
   );
 };
 
