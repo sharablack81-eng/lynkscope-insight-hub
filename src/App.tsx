@@ -76,7 +76,6 @@ const App = () => {
           Terms of Service
         </Link>
       </footer> 
-    </>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -104,6 +103,7 @@ const App = () => {
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+    </>
   );
 };
 
