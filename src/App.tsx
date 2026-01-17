@@ -90,7 +90,6 @@ const App = () => {
       <Route path="*" element={<NotFound />} />
     </Routes>
 
-    {/* Legal Footer */}
     <footer
       style={{
         marginTop: '60px',
