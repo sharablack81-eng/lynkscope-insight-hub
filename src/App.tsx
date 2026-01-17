@@ -71,7 +71,7 @@ const App = () => {
         <Toaster />
         <Sonner />
        <BrowserRouter>
-  <>
+  <div>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
@@ -106,7 +106,7 @@ const App = () => {
         Terms of Service
       </Link>
     </footer>
-  </>
+  </div>
 </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
