@@ -71,41 +71,24 @@ const App = () => {
         <Toaster />
         <Sonner />
        <BrowserRouter>
-  <div>
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/r" element={<Redirect />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-      <Route path="/terms-of-service" element={<TermsOfService />} />
-      <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
-      <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
-      <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-      <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
-      <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
-      <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
-      <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-
-    <footer
-      style={{
-        marginTop: '60px',
-        padding: '20px',
-        textAlign: 'center',
-        borderTop: '1px solid #e5e5e5',
-      }}
-    >
-      <Link to="/privacy-policy" style={{ margin: '0 15px', textDecoration: 'underline' }}>
-        Privacy Policy
-      </Link>
-      <Link to="/terms-of-service" style={{ margin: '0 15px', textDecoration: 'underline' }}>
-        Terms of Service
-      </Link>
-    </footer>
-  </div>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/r" element={<Redirect />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
+            <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+            <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
+            <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
+            <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
 </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
