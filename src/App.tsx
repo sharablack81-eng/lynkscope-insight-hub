@@ -65,7 +65,7 @@ const App = () => {
     }
   }, []);
 
-  return (
+ return <div style={{ color: "white" }}>APP LOADED</div>;
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
