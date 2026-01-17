@@ -91,7 +91,7 @@ const App = () => {
     </Routes>
 
     {/* Legal Footer */}
-    <footer>
+    <footer
       style={{
         marginTop: '60px',
         padding: '20px',
