@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -66,32 +66,33 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-       <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/r" element={<Redirect />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
-            <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
-            <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
-            <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
-            <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-</BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
+          {/* Smart links (query-based redirects) */}
+          <Route path="/r" element={<Redirect />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+           <Route path="privacy-policy" element={<PrivacyPolicy  />} />
+          <Route path="terms-of-service" element={<TermsOfService  />} />
+          <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
+          <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+          <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
+          <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
+          <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
+          {/* Routes configured above */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
   );
 };
 
