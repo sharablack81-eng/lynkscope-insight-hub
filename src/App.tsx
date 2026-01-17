@@ -76,7 +76,7 @@ const App = () => {
           <Route path="/auth" element={<Auth />} />
           {/* Smart links (query-based redirects) */}
           <Route path="/r" element={<Redirect />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute> />} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />
           <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
