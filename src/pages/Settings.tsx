@@ -655,7 +655,7 @@ const Settings = () => {
               </div>
 
               <div className="space-y-4">
-                <Link to="/privacy-policy">
+                <Link to="/privacy-policy" state={{ from: "settings" }}>
                   <Button
                     variant="outline"
                     className="w-full justify-start hover:border-primary hover:bg-primary/10 transition-all"
@@ -664,7 +664,7 @@ const Settings = () => {
                   </Button>
                 </Link>
 
-                <Link to="/terms-of-service">
+                <Link to="/terms-of-service" state={{ from: "settings" }}>
                   <Button
                     variant="outline"
                     className="w-full justify-start hover:border-primary hover:bg-primary/10 transition-all"
