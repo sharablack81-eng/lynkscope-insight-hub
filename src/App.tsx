@@ -1,15 +1,13 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 const App = () => {
   return (
-    <div style={{ 
-      padding: '40px', 
-      fontSize: '32px', 
-      fontFamily: 'Arial',
-      background: '#000',
-      color: '#fff',
-      minHeight: '100vh'
-    }}>
-      ✅ LynkScope is loading!
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<div style={{padding: '40px', fontSize: '24px'}}>Home Page Works!</div>} />
+        <Route path="/test" element={<div style={{padding: '40px', fontSize: '24px'}}>Test Page Works!</div>} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
