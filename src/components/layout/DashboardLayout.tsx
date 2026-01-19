@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Clock
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { toast } from "sonner";
 import { useSubscription } from "@/hooks/useSubscription";
 import TrialExpiredScreen from "@/components/subscription/TrialExpiredScreen";

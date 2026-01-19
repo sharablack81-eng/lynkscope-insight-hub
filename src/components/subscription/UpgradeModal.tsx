@@ -21,7 +21,7 @@ import {
   Store,
   ExternalLink
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, BACKEND_URL } from "@/lib/backend";
 import { toast } from "sonner";
 
 interface UpgradeModalProps {
@@ -55,7 +55,7 @@ const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
 
       // Call the shopify-billing edge function to create a charge
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-billing?action=create-charge`,
+        `${BACKEND_URL}/functions/v1/shopify-billing?action=create-charge`,
         {
           method: 'POST',
           headers: { 
@@ -107,7 +107,7 @@ const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
 
       // Call the shopify-oauth function to get install URL
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-oauth?action=install`,
+        `${BACKEND_URL}/functions/v1/shopify-oauth?action=install`,
         {
           method: 'POST',
           headers: { 

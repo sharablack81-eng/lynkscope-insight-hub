@@ -8,7 +8,7 @@ import {
   BarChart3,
   Crown
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, BACKEND_URL } from "@/lib/backend";
 import { toast } from "sonner";
 import { getAggregatedAnalytics } from "@/lib/analytics";
 
@@ -56,7 +56,7 @@ const Dashboard = () => {
       try {
         // Confirm the charge via edge function
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-billing?action=confirm-charge&charge_id=${chargeId}&user_id=${userId}`
+          `${BACKEND_URL}/functions/v1/shopify-billing?action=confirm-charge&charge_id=${chargeId}&user_id=${userId}`
         );
         
         const result = await response.json();

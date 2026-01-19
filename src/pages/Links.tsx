@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import LinkCard from "@/components/links/LinkCard";
 import AddLinkModal from "@/components/links/AddLinkModal";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 
 export interface Link {
   id: string;
