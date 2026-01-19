@@ -1,25 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Links from "./pages/Links";
-import Analytics from "./pages/Analytics";
-import AnalyticsOverview from "./pages/AnalyticsOverview";
-import Settings from "./pages/Settings";
-import Premium from "./pages/Premium";
-import Automation from "./pages/Automation";
-import Tools from "./pages/Tools";
-import AdvancedAnalytics from "./pages/AdvancedAnalytics";
-import NotFound from "./pages/NotFound";
-import Redirect from "./pages/Redirect";
-import ProtectedRoute from "./components/ProtectedRoute";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import NotFound from "./pages/NotFound";
+
+// Lazy load components that use Supabase to avoid initialization errors
+const Auth = lazy(() => import("./pages/Auth"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Links = lazy(() => import("./pages/Links"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const AnalyticsOverview = lazy(() => import("./pages/AnalyticsOverview"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Premium = lazy(() => import("./pages/Premium"));
+const Automation = lazy(() => import("./pages/Automation"));
+const Tools = lazy(() => import("./pages/Tools"));
+const AdvancedAnalytics = lazy(() => import("./pages/AdvancedAnalytics"));
+const Redirect = lazy(() => import("./pages/Redirect"));
+const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
+
+// Loading component for suspense fallback
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="text-center">
+      <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -71,25 +83,27 @@ const App = () => {
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
-          {/* Smart links (query-based redirects) */}
-          <Route path="/r" element={<Redirect />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/terms-of-service" element={<TermsOfService />} />
-          <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
-          <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
-          <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
-          <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
-          <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
-          {/* Routes configured above */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            {/* Smart links (query-based redirects) */}
+            <Route path="/r" element={<Redirect />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/links" element={<ProtectedRoute><Links /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><AnalyticsOverview /></ProtectedRoute>} />
+            <Route path="/analytics/:linkId" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+            <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
+            <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
+            <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
+            {/* Routes configured above */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
