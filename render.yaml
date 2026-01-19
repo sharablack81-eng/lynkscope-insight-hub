@@ -2,10 +2,12 @@
 # Ensures SPA routing works for smart-link deep routes by rewriting all paths to /index.html
 # Docs: https://render.com/docs/blueprint-spec
 
-staticSites:
-  - name: lynkscope
+services:
+  - type: web
+    name: lynkscope
+    env: static
     buildCommand: npm install && npm run build
-    publishPath: dist
+    staticPublishPath: dist
     routes:
       - type: rewrite
         source: /*
