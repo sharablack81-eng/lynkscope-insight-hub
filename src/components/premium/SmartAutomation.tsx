@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { TestTube, Clock, Plus, TrendingUp, Copy, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { useToast } from "@/hooks/use-toast";
 import CreateABTestDialog from "./CreateABTestDialog";
 import CreateExpireLinkDialog from "./CreateExpireLinkDialog";

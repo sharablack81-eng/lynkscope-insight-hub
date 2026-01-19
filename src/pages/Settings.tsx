@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, BACKEND_URL } from "@/lib/backend";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeModal from "@/components/subscription/UpgradeModal";
 
@@ -337,7 +337,7 @@ const Settings = () => {
 
       // Call via fetch with query param since supabase.functions.invoke doesn't support query params
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-billing?action=cancel`,
+        `${BACKEND_URL}/functions/v1/shopify-billing?action=cancel`,
         {
           method: 'POST',
           headers: {
