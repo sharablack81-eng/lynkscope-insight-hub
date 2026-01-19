@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -639,6 +639,39 @@ const Settings = () => {
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   Delete Account
                 </Button>
+              </div>
+            </Card>
+
+            {/* Legal */}
+            <Card className="glass-card p-6 animate-scale-in" style={{ animationDelay: "500ms" }}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Legal</h2>
+                  <p className="text-sm text-muted-foreground">Privacy and terms</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Link to="/privacy-policy">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start hover:border-primary hover:bg-primary/10 transition-all"
+                  >
+                    Privacy Policy
+                  </Button>
+                </Link>
+
+                <Link to="/terms-of-service">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start hover:border-primary hover:bg-primary/10 transition-all"
+                  >
+                    Terms of Service
+                  </Button>
+                </Link>
               </div>
             </Card>
           </div>

@@ -231,11 +231,13 @@ const Landing = () => {
               <span className="text-xl font-bold">LynkScope</span>
             </div>
             
-            <div className="flex gap-8">
+            <div className="flex flex-wrap gap-6 md:gap-8">
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Home</a>
               <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
               <a href="#preview" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Preview</a>
               <Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Login</Link>
+              <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link to="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link>
             </div>
             
             <div className="text-sm text-muted-foreground">
