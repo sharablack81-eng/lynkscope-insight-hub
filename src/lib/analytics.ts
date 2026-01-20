@@ -247,14 +247,18 @@ export function aggregateAnalytics(clicks: ClickData[], links: LinkData[]): Aggr
     .map(([continent, clicks]) => ({ continent, clicks }))
     .sort((a, b) => b.clicks - a.clicks);
 
-  // Daily clicks for last 7 days
+  // Daily clicks for last 7 days (using local timezone consistently)
   const dailyClicks: { date: string; clicks: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
+    // Set to start of day in local timezone
+    const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+    const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    
     const dayClicks = clicks.filter(c => {
       const clickDate = new Date(c.clicked_at);
-      return clickDate.toDateString() === date.toDateString();
+      return clickDate >= dayStart && clickDate <= dayEnd;
     }).length;
     
     dailyClicks.push({
