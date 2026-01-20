@@ -38,7 +38,7 @@ const Dashboard = () => {
       icon: BarChart3
     }
   ]);
-  const [chartData, setChartData] = useState<number[]>(Array(7).fill(0));
+  const [chartData, setChartData] = useState<{ date: string; clicks: number }[]>(Array(7).fill({ date: '', clicks: 0 }));
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("user");
 
@@ -121,7 +121,7 @@ const Dashboard = () => {
         }
       ]);
 
-      setChartData(analytics.dailyClicks.map(d => d.clicks));
+      setChartData(analytics.dailyClicks);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error("Failed to load dashboard data");
@@ -130,7 +130,7 @@ const Dashboard = () => {
     }
   };
 
-  const maxChartValue = Math.max(...chartData, 1);
+  const maxChartValue = Math.max(...chartData.map(d => d.clicks), 1);
 
   return (
     <DashboardLayout>
@@ -180,23 +180,23 @@ const Dashboard = () => {
               </div>
 
               <div className="h-64 flex items-end gap-3">
-                {chartData.map((clicks, i) => (
+                {chartData.map((dayData, i) => (
                   <div
                     key={i}
                     className="flex-1 bg-gradient-to-t from-primary to-purple-500 rounded-t-lg transition-all hover:from-primary/80 hover:to-purple-400 cursor-pointer animate-scale-in"
                     style={{ 
-                      height: maxChartValue > 0 ? `${(clicks / maxChartValue) * 100}%` : '0%',
-                      minHeight: clicks > 0 ? '20px' : '0px',
+                      height: maxChartValue > 0 ? `${(dayData.clicks / maxChartValue) * 100}%` : '0%',
+                      minHeight: dayData.clicks > 0 ? '20px' : '0px',
                       animationDelay: `${i * 50}ms` 
                     }}
-                    title={`${clicks} clicks`}
+                    title={`${dayData.clicks} clicks`}
                   />
                 ))}
               </div>
 
               <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
-                  <span key={i}>{day}</span>
+                {chartData.map((dayData, i) => (
+                  <span key={i}>{dayData.date}</span>
                 ))}
               </div>
             </div>
