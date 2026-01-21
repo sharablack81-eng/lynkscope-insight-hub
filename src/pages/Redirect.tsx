@@ -63,8 +63,22 @@ const Redirect = () => {
         console.warn('Tracking request failed, proceeding with redirect');
       }
 
-      // Redirect
-      window.location.replace(decodedUrl);
+      // Redirect - handle both standalone and Shopify embedded contexts
+      // Check if we're inside an iframe (embedded in Shopify)
+      const isEmbedded = window.self !== window.top;
+      
+      if (isEmbedded) {
+        // Embedded in iframe (Shopify) - redirect parent window
+        try {
+          window.top!.location.href = decodedUrl;
+        } catch (e) {
+          // Fallback if cross-origin access is blocked
+          window.open(decodedUrl, '_top');
+        }
+      } else {
+        // Standalone - use normal redirect
+        window.location.replace(decodedUrl);
+      }
     };
 
     handleRedirect();
