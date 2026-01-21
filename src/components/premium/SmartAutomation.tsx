@@ -25,7 +25,7 @@ const SmartAutomation = () => {
   // Use link.user_id (the link OWNER) for merchant attribution, NOT the current user
   const getSmartUrl = (link?: { id?: string; url?: string; user_id?: string } | null) => {
     if (!link?.url || !link?.user_id) return "";
-    const base = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}${link.id ? `&linkId=${link.id}` : ""}`;
+    const base = `${window.location.origin}/#/r?url=${encodeURIComponent(link.url)}${link.id ? `&linkId=${link.id}` : ""}`;
     return `${base}&mid=${link.user_id}`;
   };
 
