@@ -1,4 +1,3 @@
-console.log("slug", slug);
 import { useEffect, useState } from "react";
 import { BACKEND_ANON_KEY, BACKEND_URL } from "@/lib/backend";
 
