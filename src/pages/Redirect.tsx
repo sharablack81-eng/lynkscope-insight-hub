@@ -64,7 +64,7 @@ const Redirect = () => {
       }
 
       // Redirect
-      window.location.href = decodedUrl;
+      window.location.replace(decodedUrl);
     };
 
     handleRedirect();
