@@ -56,7 +56,7 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
           <button
             onClick={() => {
               // Use link.user_id (the link OWNER) for merchant attribution, NOT the current user
-              const smartUrl = `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}&mid=${link.user_id}`;
+              const smartUrl = `${window.location.origin}/#/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}&mid=${link.user_id}`;
               onCopy(smartUrl);
             }}
             className="text-xs text-primary hover:underline flex items-center gap-1"
