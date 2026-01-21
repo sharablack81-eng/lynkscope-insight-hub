@@ -21,7 +21,7 @@ const ToolsExports = () => {
 
   // Use link.user_id (the link OWNER) for merchant attribution, NOT the current user
   const getSmartUrl = (link: { id: string; url: string; user_id: string }) => {
-    return `${window.location.origin}/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}&mid=${link.user_id}`;
+    return `${window.location.origin}/#/r?url=${encodeURIComponent(link.url)}&linkId=${link.id}&mid=${link.user_id}`;
   };
 
   // Fetch real links from database
