@@ -1,10 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { 
-  createRecurringCharge, 
-  activateRecurringCharge, 
-  cancelRecurringCharge 
-} from "../shopify-api-client.ts";
+
+// Import Shopify API client functions using absolute path for Deno Deploy compatibility
+const shopifyApiClientModule = await import('../shopify-api-client.ts');
+const createRecurringCharge = shopifyApiClientModule.createRecurringCharge;
+const activateRecurringCharge = shopifyApiClientModule.activateRecurringCharge;
+const cancelRecurringCharge = shopifyApiClientModule.cancelRecurringCharge;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
