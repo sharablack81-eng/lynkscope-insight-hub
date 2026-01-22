@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Import Shopify API client for canceling charges on uninstall
+const shopifyApiClientModule = await import('../shopify-api-client.ts');
+const cancelRecurringCharge = shopifyApiClientModule.cancelRecurringCharge;
+
 // Environment variables
 const SHOPIFY_CLIENT_SECRET = Deno.env.get('SHOPIFY_CLIENT_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -166,7 +170,7 @@ async function handleAppUninstall(
   // Check for active OR revoked status (idempotency - already processed is OK)
   const { data: merchant, error: findError } = await supabase
     .from('merchants')
-    .select('id, user_id, shop_domain, shopify_access_token, token_status')
+    .select('id, user_id, shop_domain, shopify_access_token, shopify_charge_id, subscription_status, token_status')
     .eq('shop_domain', normalizedShop)
     .single();
 
@@ -180,6 +184,33 @@ async function handleAppUninstall(
   if (merchant.token_status === 'revoked' && !merchant.shopify_access_token) {
     console.log('Token already revoked for shop:', normalizedShop);
     return; // Already processed - idempotent
+  }
+
+  // CRITICAL: Cancel recurring charge on Shopify BEFORE cleanup
+  // This ensures billing stops when app is uninstalled (required for App Store approval)
+  if (
+    merchant.shopify_access_token &&
+    merchant.shopify_charge_id &&
+    merchant.subscription_status === 'active' &&
+    merchant.token_status === 'active'
+  ) {
+    try {
+      const chargeIdNum = parseInt(merchant.shopify_charge_id, 10);
+      if (!isNaN(chargeIdNum)) {
+        await cancelRecurringCharge(
+          normalizedShop,
+          merchant.shopify_access_token,
+          chargeIdNum
+        );
+        console.log('Recurring charge cancelled on Shopify for shop:', normalizedShop);
+      } else {
+        console.error('Invalid charge ID format for cancellation:', merchant.shopify_charge_id);
+      }
+    } catch (error) {
+      // Log but don't fail - continue with cleanup even if Shopify cancellation fails
+      console.error('Failed to cancel Shopify charge on uninstall:', error);
+      // The charge might already be cancelled or the API might be unavailable
+    }
   }
 
   // CRITICAL: Clean up all shop-scoped data before revoking token
