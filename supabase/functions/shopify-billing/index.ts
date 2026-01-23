@@ -1,21 +1,38 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Import Shopify API client functions using absolute path for Deno Deploy compatibility
-const shopifyApiClientModule = await import('../shopify-api-client.ts');
-const createRecurringCharge = shopifyApiClientModule.createRecurringCharge;
-const activateRecurringCharge = shopifyApiClientModule.activateRecurringCharge;
-const cancelRecurringCharge = shopifyApiClientModule.cancelRecurringCharge;
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Validate required environment variables on startup
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const APP_URL = Deno.env.get('APP_URL') || 'https://your-app.lovable.app';
+const APP_URL = Deno.env.get('APP_URL');
 const SHOPIFY_TEST_MODE = Deno.env.get('SHOPIFY_TEST_MODE') === 'true';
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !APP_URL) {
+  console.error('CRITICAL: Missing required environment variables', {
+    hasSupabaseUrl: !!SUPABASE_URL,
+    hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
+    hasAppUrl: !!APP_URL
+  });
+}
+
+// Load Shopify API client module once at startup
+let shopifyApiClient: any = null;
+let shopifyApiClientError: Error | null = null;
+
+(async () => {
+  try {
+    shopifyApiClient = await import('../shopify-api-client.ts');
+    console.log('Shopify API client loaded successfully');
+  } catch (error) {
+    shopifyApiClientError = error instanceof Error ? error : new Error(String(error));
+    console.error('CRITICAL: Failed to load Shopify API client:', shopifyApiClientError);
+  }
+})();
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,12 +40,38 @@ serve(async (req) => {
   }
 
   try {
+    // Validate environment variables
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !APP_URL) {
+      console.error('Missing required environment variables');
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        message: 'Service temporarily unavailable'
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if Shopify API client loaded
+    if (!shopifyApiClient) {
+      if (shopifyApiClientError) {
+        console.error('Shopify API client not available:', shopifyApiClientError);
+      }
+      return new Response(JSON.stringify({ 
+        error: 'Service initialization error',
+        message: 'Please try again in a moment'
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
     
     console.log('Shopify billing request:', { action });
 
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     if (action === 'create-charge') {
       const authHeader = req.headers.get('authorization');
@@ -93,7 +136,7 @@ serve(async (req) => {
       // Create recurring application charge via Shopify Admin API
       // Uses rate-limit-safe API client with retry logic
       try {
-        const { confirmationUrl } = await createRecurringCharge(
+        const { confirmationUrl } = await shopifyApiClient.createRecurringCharge(
           merchant.shop_domain,
           merchant.shopify_access_token,
           {
@@ -181,7 +224,7 @@ serve(async (req) => {
           throw new Error('Invalid charge ID');
         }
 
-        await activateRecurringCharge(
+        await shopifyApiClient.activateRecurringCharge(
           merchant.shop_domain,
           merchant.shopify_access_token,
           chargeIdNum
@@ -195,7 +238,8 @@ serve(async (req) => {
         });
       }
 
-      // Update merchant subscription status to active
+      // CRITICAL: Update merchant subscription status to active
+      // This MUST succeed for billing confirmation to be valid
       const { error: updateError } = await supabase
         .from('merchants')
         .update({ 
@@ -206,12 +250,17 @@ serve(async (req) => {
         .eq('user_id', userId);
 
       if (updateError) {
-        console.error('Error updating merchant:', updateError);
+        console.error('CRITICAL: Failed to update subscription status:', updateError);
+        // Do NOT redirect to success - subscription update failed
+        return new Response(null, {
+          status: 302,
+          headers: { 'Location': `${APP_URL}/dashboard?error=status_update_failed` },
+        });
       }
 
       console.log('Subscription activated for user:', userId);
 
-      // Redirect back to app
+      // Redirect back to app with success
       return new Response(null, {
         status: 302,
         headers: { 'Location': `${APP_URL}/dashboard?subscription_activated=true` },
@@ -280,7 +329,7 @@ serve(async (req) => {
         try {
           const chargeIdNum = parseInt(merchant.shopify_charge_id, 10);
           if (!isNaN(chargeIdNum)) {
-            await cancelRecurringCharge(
+            await shopifyApiClient.cancelRecurringCharge(
               merchant.shop_domain,
               merchant.shopify_access_token,
               chargeIdNum
