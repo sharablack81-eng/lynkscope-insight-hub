@@ -1,14 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Import Shopify API client for canceling charges on uninstall
-const shopifyApiClientModule = await import('../shopify-api-client.ts');
-const cancelRecurringCharge = shopifyApiClientModule.cancelRecurringCharge;
-
 // Environment variables
 const SHOPIFY_CLIENT_SECRET = Deno.env.get('SHOPIFY_CLIENT_SECRET');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+// Load Shopify API client module once at startup
+let shopifyApiClient: any = null;
+let shopifyApiClientError: Error | null = null;
+
+(async () => {
+  try {
+    shopifyApiClient = await import('../shopify-api-client.ts');
+    console.log('Shopify API client loaded for webhooks');
+  } catch (error) {
+    shopifyApiClientError = error instanceof Error ? error : new Error(String(error));
+    console.error('WARNING: Failed to load Shopify API client for webhooks:', shopifyApiClientError);
+    // Webhooks can still process uninstall without cancelling charges if API client fails
+  }
+})();
 
 // CORS headers - webhooks should not be called from browser
 const corsHeaders = {
@@ -189,6 +200,7 @@ async function handleAppUninstall(
   // CRITICAL: Cancel recurring charge on Shopify BEFORE cleanup
   // This ensures billing stops when app is uninstalled (required for App Store approval)
   if (
+    shopifyApiClient &&
     merchant.shopify_access_token &&
     merchant.shopify_charge_id &&
     merchant.subscription_status === 'active' &&
@@ -197,7 +209,7 @@ async function handleAppUninstall(
     try {
       const chargeIdNum = parseInt(merchant.shopify_charge_id, 10);
       if (!isNaN(chargeIdNum)) {
-        await cancelRecurringCharge(
+        await shopifyApiClient.cancelRecurringCharge(
           normalizedShop,
           merchant.shopify_access_token,
           chargeIdNum
@@ -211,6 +223,8 @@ async function handleAppUninstall(
       console.error('Failed to cancel Shopify charge on uninstall:', error);
       // The charge might already be cancelled or the API might be unavailable
     }
+  } else if (!shopifyApiClient) {
+    console.warn('Shopify API client not available - skipping charge cancellation');
   }
 
   // CRITICAL: Clean up all shop-scoped data before revoking token
