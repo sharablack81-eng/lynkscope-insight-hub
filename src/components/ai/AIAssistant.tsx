@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { supabase } from "@/lib/backend";
+import { supabase, BACKEND_URL } from "@/lib/backend";
 
 interface Message {
   id: string;
@@ -73,7 +73,7 @@ export const AIAssistant = () => {
         return null;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/collect-analytics`, {
+      const response = await fetch(`${BACKEND_URL}/functions/v1/collect-analytics`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -100,7 +100,7 @@ export const AIAssistant = () => {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marketing-analysis`, {
+      const response = await fetch(`${BACKEND_URL}/functions/v1/marketing-analysis`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
