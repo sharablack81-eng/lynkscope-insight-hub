@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Edit, Trash2, ExternalLink } from "lucide-react";
 import { Link } from "@/pages/Links";
+import ShortLinkDisplay from "./ShortLinkDisplay";
 
 interface LinkCardProps {
   link: Link;
@@ -65,6 +66,14 @@ const LinkCard = ({ link, index, onCopy, onEdit, onDelete, onViewAnalytics }: Li
             Copy Smart Link
           </button>
         </div>
+      </div>
+
+      {/* Short Link Display */}
+      <div className="mb-4">
+        <ShortLinkDisplay 
+          originalUrl={link.url}
+          linkId={link.id}
+        />
       </div>
 
       {/* Metrics */}

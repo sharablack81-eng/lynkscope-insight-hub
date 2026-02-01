@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
+import { BusinessProvider } from "@/contexts/BusinessContext";
+import { AIAssistant } from "@/components/ai/AIAssistant";
 import Landing from "./pages/Landing";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -79,12 +81,14 @@ const App = () => {
 
  return (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <HashRouter>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
+    <BusinessProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AIAssistant />
+        <HashRouter>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             {/* Smart links (query-based redirects) */}
@@ -105,7 +109,8 @@ const App = () => {
           </Routes>
         </Suspense>
       </HashRouter>
-    </TooltipProvider>
+      </TooltipProvider>
+    </BusinessProvider>
   </QueryClientProvider>
   );
 };

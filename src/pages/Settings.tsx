@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useBusinessProfile } from "@/contexts/BusinessContext";
 import {
   Dialog,
   DialogContent,
@@ -36,9 +37,13 @@ import UpgradeModal from "@/components/subscription/UpgradeModal";
 const Settings = () => {
   const navigate = useNavigate();
   const { status, daysRemaining, isLoading: subscriptionLoading } = useSubscription();
-  const [displayName, setDisplayName] = useState("user");
+  const { businessName: contextBusinessName, businessNiche: contextBusinessNiche, refetch: refetchBusiness } = useBusinessProfile();
+  const [businessName, setBusinessName] = useState("");
+  const [businessNiche, setBusinessNiche] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
+  const [businessNameError, setBusinessNameError] = useState("");
+  const [businessNicheError, setBusinessNicheError] = useState("");
   const [darkMode, setDarkMode] = useState(true);
   const [accentColor, setAccentColor] = useState("#8B5CF6");
   const [backgroundAnimation, setBackgroundAnimation] = useState(true);
@@ -154,12 +159,13 @@ const Settings = () => {
         
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url')
+          .select('business_name, business_niche, avatar_url')
           .eq('id', user.id)
           .single();
 
         if (error) throw error;
-        setDisplayName(profile?.display_name || "user");
+        setBusinessName(profile?.business_name || "");
+        setBusinessNiche(profile?.business_niche || "");
         setAvatarUrl(profile?.avatar_url || null);
       }
     } catch (error) {
@@ -171,19 +177,42 @@ const Settings = () => {
   };
 
   const handleSaveProfile = async () => {
+    // Validation
+    let hasErrors = false;
+    setBusinessNameError("");
+    setBusinessNicheError("");
+
+    if (!businessName.trim()) {
+      setBusinessNameError("Business name is required");
+      hasErrors = true;
+    }
+
+    if (!businessNiche.trim()) {
+      setBusinessNicheError("Business niche is required");
+      hasErrors = true;
+    }
+
+    if (hasErrors) return;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
       const { error } = await supabase
         .from('profiles')
-        .update({ display_name: displayName })
+        .update({ 
+          business_name: businessName.trim(),
+          business_niche: businessNiche.trim()
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
+      // Refetch business context to update global state
+      await refetchBusiness();
+
       toast.success("Profile saved successfully!", {
-        description: "Your changes have been updated.",
+        description: "Your business information has been updated.",
       });
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -396,8 +425,8 @@ const Settings = () => {
                   <User className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">Profile Settings</h2>
-                  <p className="text-sm text-muted-foreground">Update your personal information</p>
+                  <h2 className="text-xl font-bold">Business Profile</h2>
+                  <p className="text-sm text-muted-foreground">Update your business identity and information</p>
                 </div>
               </div>
 
@@ -435,15 +464,40 @@ const Settings = () => {
 
                 <Separator />
 
-                {/* Display Name */}
+                {/* Business Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <Label htmlFor="businessName">Business Name *</Label>
                   <Input
-                    id="displayName"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="bg-input border-border"
+                    id="businessName"
+                    value={businessName}
+                    onChange={(e) => {
+                      setBusinessName(e.target.value);
+                      if (e.target.value.trim()) setBusinessNameError("");
+                    }}
+                    placeholder="e.g., Acme Marketing Co."
+                    className={`bg-input border-border ${businessNameError ? "border-destructive" : ""}`}
                   />
+                  {businessNameError && (
+                    <p className="text-xs text-destructive">{businessNameError}</p>
+                  )}
+                </div>
+
+                {/* Business Niche */}
+                <div className="space-y-2">
+                  <Label htmlFor="businessNiche">Business Niche *</Label>
+                  <Input
+                    id="businessNiche"
+                    value={businessNiche}
+                    onChange={(e) => {
+                      setBusinessNiche(e.target.value);
+                      if (e.target.value.trim()) setBusinessNicheError("");
+                    }}
+                    placeholder="e.g., Digital Marketing, E-commerce, SaaS"
+                    className={`bg-input border-border ${businessNicheError ? "border-destructive" : ""}`}
+                  />
+                  {businessNicheError && (
+                    <p className="text-xs text-destructive">{businessNicheError}</p>
+                  )}
                 </div>
 
                 {/* Email */}
