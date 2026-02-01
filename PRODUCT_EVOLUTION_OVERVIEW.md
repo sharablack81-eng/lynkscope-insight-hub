@@ -122,7 +122,7 @@ Users now have:
 │  │  • short-link-create                            │  │
 │  │  • short-link-redirect ← short links ✅          │  │
 │  │  • collect-analytics ← AI data ✨               │  │
-│  │  • marketing-analysis ← Claude API ✨            │  │
+│  │  • marketing-analysis ← OpenAI ✨            │  │
 │  │                                                  │  │
 │  │  Database (PostgreSQL):                         │  │
 │  │  • links ← Phase 1: links                       │  │
@@ -142,7 +142,7 @@ Users now have:
 │  │         EXTERNAL INTEGRATIONS                    │  │
 │  ├──────────────────────────────────────────────────┤  │
 │  │                                                  │  │
-│  │  • Claude AI ← Phase 3: Marketing analysis ✨   │  │
+│  │  • OpenAI ← Phase 3: Marketing analysis ✨   │  │
 │  │  • Shopify ← Subscription management             │  │
 │  │  • Email service ← Notifications                 │  │
 │  │  • (Cliplyst ← Phase 4: Coming soon)            │  │
@@ -222,9 +222,9 @@ Users now have:
 8️⃣ AI ANALYSIS
    marketing-analysis function runs:
    - Receives AnalyticsData + JWT token
-   - Builds Claude prompt with business context
-   - Sends to Claude API
-   - Claude analyzes: "For a Digital Marketing company,
+   - Builds prompt with business context
+   - Sends to OpenAI API
+   - OpenAI analyzes: "For a Digital Marketing company,
      Instagram is performing well, TikTok needs help"
    
    Returns AnalysisResult:
@@ -320,7 +320,7 @@ Users now have:
 - Database indexed queries
 - JWT authentication
 - No session management
-- Claude API handles load
+- OpenAI API handles load
 
 ---
 
@@ -366,8 +366,8 @@ Users now have:
 
 ### What You Need to Deploy
 
-1. **Anthropic API Key** (~2 minutes)
-   - Visit https://console.anthropic.com/keys
+1. **OpenAI API Key** (~2 minutes)
+   - Visit https://platform.openai.com/account/api-keys
    - Create API key
    - Add to Supabase secrets
 

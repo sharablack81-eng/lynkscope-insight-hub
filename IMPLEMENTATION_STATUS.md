@@ -29,7 +29,7 @@
 
 #### Backend (2 files, ~300 lines)
 - `collect-analytics` Edge Function - Aggregates user data
-- `marketing-analysis` Edge Function - Claude AI integration
+ - `marketing-analysis` Edge Function - OpenAI integration
 
 #### Integration ✅
 - Added to `App.tsx` for global visibility
@@ -125,7 +125,7 @@ Integration Points:   ✅ Cleanly separated
 - [x] Future roadmap planned
 
 ### Deployment ⏳ (Requires 1 action)
-- [ ] **Set ANTHROPIC_API_KEY in Supabase secrets**
+- [ ] **Set OPENAI_API_KEY in Supabase secrets**
 - [x] Infrastructure ready (Supabase)
 - [x] Frontend ready (React components)
 - [x] Backend ready (Edge Functions)
@@ -198,8 +198,8 @@ fetch marketing-analysis with JWT + data
 Edge Function:
   - Validates JWT ✅
   - Checks API key configured ✅
-  - Builds Claude prompt ✅
-  - Calls Claude API ✅
+  - Builds prompt ✅
+  - Calls OpenAI API ✅
   - Parses JSON response ✅
   - Returns AnalysisResult ✅
 ```
@@ -233,14 +233,14 @@ AnalysisDisplay renders:
 - No cross-user data leakage
 
 ### Secrets Management ✅
-- ANTHROPIC_API_KEY stored in Supabase secrets
+- OPENAI_API_KEY stored in Supabase secrets
 - Never exposed to frontend
 - Never appears in logs or errors
 
 ### Input Validation ✅
 - User IDs extracted from JWT
 - Analytics data structure validated
-- Claude prompt sanitized
+- Prompt sanitized
 - No SQL injection risks
 
 ---
@@ -256,7 +256,7 @@ API Call 1: collect-analytics
 
 API Call 2: marketing-analysis  
   - Prompt building: ~50ms
-  - Claude API latency: 2-5s
+  - OpenAI API latency: 2-5s
   - Total: 2-5s ✅
 
 Total User-to-Results: 2.5-5.5s ✅
@@ -315,7 +315,7 @@ Action: Helpful error suggestion
 Impact: Non-breaking ✅
 ```
 
-### Scenario: Claude API Fails
+### Scenario: OpenAI API Fails
 ```
 Result: "Analysis failed, please try again"
 Action: Retry available
@@ -360,7 +360,7 @@ Impact: Non-breaking ✅
 - [ ] Deploy to staging
 - [ ] Test with real user account
 - [ ] Verify analytics collection
-- [ ] Verify Claude integration
+- [ ] Verify OpenAI integration
 - [ ] Monitor performance
 - [ ] Gather user feedback
 
@@ -369,7 +369,7 @@ Impact: Non-breaking ✅
 ## Deployment Instructions
 
 ### Prerequisites
-1. Anthropic API account with key
+1. OpenAI account with API key
 2. Supabase project with Edge Functions enabled
 3. Build environment (npm, node)
 
@@ -378,7 +378,7 @@ Impact: Non-breaking ✅
 #### Step 1: Configure API Key (5 min)
 ```bash
 # In Supabase Dashboard → Project Settings → Secrets:
-Add Secret: ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
+Add Secret: OPENAI_API_KEY=sk-... (store securely)
 ```
 
 #### Step 2: Deploy Backend (10 min)
@@ -410,7 +410,7 @@ npm run build
 
 ### Production Monitoring
 - Watch Edge Function logs in Supabase
-- Monitor Claude API usage costs
+- Monitor OpenAI usage costs
 - Track user engagement with AI Assistant
 - Collect feedback on recommendation quality
 
@@ -421,7 +421,7 @@ npm run build
 ### Current Limitations
 1. Analysis time window: Fixed to "Last 30 days"
 2. Minimum data: Needs at least 1 link, 1 click
-3. Claude model: Uses Sonnet 3.5 (good balance of cost/quality)
+3. OpenAI model: Configure model per deployment (e.g. `gpt-4o-mini`)
 4. Caching: No caching (fresh analysis each time)
 
 ### Planned Enhancements
@@ -430,7 +430,7 @@ npm run build
 3. **Custom Timeframe**: User selects time period
 4. **Historical Trends**: Compare analyses over time
 5. **Benchmarking**: Compare against industry averages
-6. **Real-time Streaming**: Stream Claude response live
+6. **Real-time Streaming**: Stream OpenAI response live
 7. **Custom Prompts**: Users ask custom questions
 8. **Cliplyst Integration**: Auto-generate content
 
@@ -530,14 +530,14 @@ Endpoints Created:       2 (collect-analytics, marketing-analysis)
 Components Created:      2 (AIAssistant, AnalysisDisplay)
 Integration Points:      1 (App.tsx)
 Database Tables Used:    3 (links, link_clicks, profiles)
-API Keys Required:       1 (ANTHROPIC_API_KEY)
+API Keys Required:       1 (OPENAI_API_KEY)
 ```
 
 ### Performance Metrics
 ```
 Average Analysis Time:   2.5-5.5 seconds (async)
 Database Query Time:     300-500 milliseconds
-Claude API Latency:      2-5 seconds
+OpenAI API Latency:      2-5 seconds
 UI Responsiveness:       100% (non-blocking)
 ```
 
@@ -546,7 +546,7 @@ UI Responsiveness:       100% (non-blocking)
 ## What's Next
 
 ### Immediate (Today)
-1. Add ANTHROPIC_API_KEY to Supabase
+1. Add OPENAI_API_KEY to Supabase
 2. Deploy Edge Functions
 3. Build and deploy frontend
 4. Test with real data
@@ -554,7 +554,7 @@ UI Responsiveness:       100% (non-blocking)
 ### Week 1
 1. Monitor Edge Function logs
 2. Gather user feedback
-3. Track Claude API costs
+3. Track OpenAI usage costs
 4. Optimize prompts if needed
 
 ### Month 1
@@ -608,7 +608,7 @@ UI Responsiveness:       100% (non-blocking)
 **Documentation**: ✅ Comprehensive  
 **Ready to Ship**: ✅ Yes  
 
-**Next Action**: Configure ANTHROPIC_API_KEY and deploy
+**Next Action**: Configure OPENAI_API_KEY and deploy
 
 ---
 

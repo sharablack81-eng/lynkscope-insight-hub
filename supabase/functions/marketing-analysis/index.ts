@@ -37,12 +37,9 @@ interface AnalysisResult {
   };
   nextSteps: string;
 }
-
-async function callClaudeAPI(analyticsData: AnalyticsData): Promise<AnalysisResult> {
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
-  }
+async function callOpenAIAPI(analyticsData: AnalyticsData): Promise<AnalysisResult> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
 
   const prompt = `You are a marketing analytics expert. Analyze the following marketing data and provide actionable insights.
 
@@ -92,39 +89,34 @@ Format your response as valid JSON with these exact fields:
   "nextSteps": "..."
 }`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
+      model: 'gpt-4o-mini',
       messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
+        { role: 'system', content: 'You are a helpful assistant that outputs structured JSON.' },
+        { role: 'user', content: prompt },
       ],
+      max_tokens: 1200,
+      temperature: 0.2,
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Claude API error:', error);
-    throw new Error(`Claude API failed: ${response.statusText}`);
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('OpenAI API error:', err);
+    throw new Error(`OpenAI API failed: ${res.statusText}`);
   }
 
-  const data = await response.json();
-  const content = data.content[0].text;
+  const data = await res.json();
+  const content = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || '';
 
-  // Extract JSON from response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse Claude response as JSON');
-  }
+  if (!jsonMatch) throw new Error('Failed to parse OpenAI response as JSON');
 
   return JSON.parse(jsonMatch[0]);
 }
@@ -154,8 +146,8 @@ serve(async (req: Request) => {
 
     console.log('Analyzing marketing data for:', analyticsData.businessName);
 
-    // Call Claude API for analysis
-    const analysis = await callClaudeAPI(analyticsData);
+      // Call OpenAI API for analysis
+      const analysis = await callOpenAIAPI(analyticsData);
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

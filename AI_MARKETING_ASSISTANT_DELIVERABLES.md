@@ -106,7 +106,7 @@
 
 **Features**:
 - JWT authentication
-- Claude AI integration
+- OpenAI integration
 - Business context awareness
 - JSON response parsing
 - Error handling
@@ -115,8 +115,8 @@
 **Processing**:
 1. Validates JWT token
 2. Receives AnalyticsData JSON
-3. Builds Claude prompt with business context
-4. Calls Claude API
+3. Builds prompt with business context
+4. Calls OpenAI API
 5. Parses JSON response
 6. Returns AnalysisResult JSON
 
@@ -159,7 +159,7 @@ AnalyticsData {
 - 200: Success (returns AnalysisResult)
 - 401: Unauthorized (no JWT)
 - 405: Method not allowed (not POST)
-- 500: Server error (Claude API or parsing)
+-- 500: Server error (OpenAI API or parsing)
 
 ---
 

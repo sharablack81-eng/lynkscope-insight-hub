@@ -3,8 +3,8 @@
 ## Pre-Deployment Checklist
 
 ### Environment Setup
-- [ ] Anthropic API key obtained from [https://console.anthropic.com](https://console.anthropic.com)
-- [ ] API key added to Supabase project secrets
+- [ ] OpenAI API key obtained from [https://platform.openai.com](https://platform.openai.com)
+- [ ] API key added to Supabase project secrets as `OPENAI_API_KEY`
 - [ ] Supabase Edge Functions enabled
 - [ ] Business profile migration deployed (`business_identity.sql`)
 - [ ] Short links system deployed
@@ -20,7 +20,7 @@
 - [ ] Chat panel opens/closes smoothly
 - [ ] "Summarize my marketing data" command works
 - [ ] Analytics data aggregates correctly
-- [ ] Claude API returns valid JSON
+- [ ] OpenAI returns valid JSON
 - [ ] Platform rankings display properly
 - [ ] Error handling works gracefully
 
@@ -44,7 +44,7 @@ supabase functions deploy marketing-analysis --project-ref <YOUR_PROJECT_ID>
 In Supabase Dashboard → Edge Functions → Settings:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
+OPENAI_API_KEY=sk-... (store securely in project secrets)
 ```
 
 ### Step 3: Deploy Frontend
@@ -174,8 +174,8 @@ supabase functions logs marketing-analysis --project-ref <YOUR_PROJECT_ID>
 #### 3. "Claude API failed"
 - **Problem**: marketing-analysis returning 500 error
 - **Solution**:
-  - Check API key is valid (test at https://console.anthropic.com)
-  - Verify model name is correct: `claude-3-5-sonnet-20241022`
+  - Check API key is valid (test at https://platform.openai.com)
+  - Verify model name is correct for your OpenAI plan (e.g. `gpt-4o-mini`)
   - Check rate limits haven't been exceeded
   - Review Edge Function logs for specific error
 

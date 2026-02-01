@@ -2,7 +2,7 @@
 
 ## What Was Built
 
-A complete **Marketing AI Assistant** feature for Lynkscope that analyzes link performance and provides personalized marketing recommendations using Claude AI.
+A complete **Marketing AI Assistant** feature for Lynkscope that analyzes link performance and provides personalized marketing recommendations using OpenAI.
 
 ### Components Delivered
 
@@ -32,7 +32,7 @@ A complete **Marketing AI Assistant** feature for Lynkscope that analyzes link p
   - Returns structured JSON
 
 - **marketing-analysis/index.ts** (200 lines)
-  - Integrates with Claude AI API
+  - Integrates with OpenAI
   - Sends business context + analytics data
   - Receives platform rankings (0-100 scores)
   - Provides recommendations per platform
@@ -50,7 +50,7 @@ A complete **Marketing AI Assistant** feature for Lynkscope that analyzes link p
 ## Key Features
 
 ### 🎯 Smart Analysis
-- Uses Claude 3.5 Sonnet AI model
+- Uses OpenAI models (configurable)
 - Context-aware recommendations based on business niche
 - Analyzes platform performance across all user links
 - Provides specific, actionable suggestions

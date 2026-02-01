@@ -23,7 +23,7 @@ src/components/ai/
 supabase/functions/
 ├── collect-analytics/       # Aggregates user analytics
 │   └── index.ts
-└── marketing-analysis/      # Claude AI integration
+└── marketing-analysis/      # OpenAI integration
     └── index.ts
 ```
 
@@ -40,9 +40,9 @@ supabase/functions/
 ### 1. Set API Key (5 minutes)
 ```bash
 # In Supabase Dashboard → Project Settings → Secrets:
-ANTHROPIC_API_KEY = sk-ant-xxxxxxxxxxxxx
+OPENAI_API_KEY = sk-...  # store securely
 
-# Get key from: https://console.anthropic.com/keys
+# Get key from: https://platform.openai.com/account/api-keys
 ```
 
 ### 2. Deploy Edge Functions (10 minutes)
@@ -227,7 +227,7 @@ User reviews analysis + clicks "Send to Cliplyst"
 - Supabase RLS policies enforce access control
 
 ✅ **API Key Protection**
-- ANTHROPIC_API_KEY stored in Supabase secrets
+ - OPENAI_API_KEY stored in Supabase secrets
 - Never exposed to frontend
 - Not in environment files or code
 
@@ -239,7 +239,7 @@ User reviews analysis + clicks "Send to Cliplyst"
 
 ### Response Times
 - Analytics collection: 300-500ms
-- Claude API analysis: 2-5 seconds
+- OpenAI analysis: 2-5 seconds
 - Total: 2.5-5.5 seconds
 - **All async/non-blocking** ✨
 
@@ -252,7 +252,7 @@ User reviews analysis + clicks "Send to Cliplyst"
 ### Scalability
 - Edge Functions scale automatically
 - No database load (Supabase handles)
-- Claude API handles concurrency
+- OpenAI handles concurrency
 - Infinite users supported
 
 ## 💰 Costs
@@ -294,7 +294,7 @@ User reviews analysis + clicks "Send to Cliplyst"
 - Check that links have clicks
 - Test with at least 3-5 links and 10+ clicks
 
-### "ANTHROPIC_API_KEY not configured"?
+### "OPENAI_API_KEY not configured"?
 - Add key to Supabase secrets
 - Restart Edge Functions
 - Check key format (should start with `sk-ant-`)
@@ -365,7 +365,7 @@ const handleSendToCliplyst = async () => {
 ## 🚨 Important Notes
 
 ### Before Going Live
-- [ ] Set ANTHROPIC_API_KEY in Supabase
+- [ ] Set OPENAI_API_KEY in Supabase
 - [ ] Deploy Edge Functions
 - [ ] Test with real user data
 - [ ] Monitor Claude API costs
@@ -392,7 +392,7 @@ const handleSendToCliplyst = async () => {
 |-------|----------|
 | Button doesn't appear | Check App.tsx import, clear cache |
 | "Not authenticated" | User needs to login first |
-| Analysis fails | Check ANTHROPIC_API_KEY is set |
+| Analysis fails | Check OPENAI_API_KEY is set |
 | Takes too long | Normal 2-5s wait, check internet |
 | Wrong results | Verify link/click data exists |
 | UI freezes | Check browser console for errors |
@@ -450,7 +450,7 @@ Documentation:
   ✅ Quick start guide (this file)
 
 Configuration:
-  ⏳ ANTHROPIC_API_KEY needed
+  ⏳ OPENAI_API_KEY needed
   ⏳ Edge Functions need to be deployed
   ⏳ Frontend build needed
 

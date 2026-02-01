@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Marketing AI Assistant** is an intelligent background-processing feature that analyzes your link performance and provides personalized marketing recommendations using Claude AI. It's designed to make Lynkscope feel like a smart platform by providing actionable insights without blocking the UI.
+The **Marketing AI Assistant** is an intelligent background-processing feature that analyzes your link performance and provides personalized marketing recommendations using OpenAI. It's designed to make Lynkscope feel like a smart platform by providing actionable insights without blocking the UI.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ The **Marketing AI Assistant** is an intelligent background-processing feature t
   - Average CTR metrics
 
 ##### **marketing-analysis** (`supabase/functions/marketing-analysis/index.ts`)
-- Processes analytics data through Claude API
+- Processes analytics data through OpenAI
 - Sends structured prompt with business context
 - Returns ranked analysis including:
   - Platform performance rankings (0-100 score)
@@ -56,7 +56,7 @@ Return AnalyticsData JSON
     ↓
 send marketing-analysis (POST with analytics)
     ↓
-Claude API analyzes data
+  OpenAI analyzes data
     ↓
 Return AnalysisResult with rankings/insights
     ↓
@@ -141,7 +141,7 @@ Response: AnalysisResult {
 - Non-intrusive chat interface
 
 ### 🎯 Smart Analysis
-- Uses Claude AI for intelligent insights
+- Uses OpenAI for intelligent insights
 - Context-aware recommendations based on business niche
 - Platform-specific guidance
 - Performance classification (excellent/good/fair/poor)
@@ -183,12 +183,12 @@ SUPABASE_URL=<your_supabase_url>
 SUPABASE_SERVICE_ROLE_KEY=<your_service_role_key>
 ```
 
-### Claude AI (via Supabase)
+### OpenAI (via Supabase)
 ```
-ANTHROPIC_API_KEY=<your_anthropic_api_key>
+OPENAI_API_KEY=<your_openai_api_key>
 ```
 
-Set in Supabase Functions environment variables.
+Set in Supabase Functions environment variables as `OPENAI_API_KEY`.
 
 ## Performance Metrics
 
