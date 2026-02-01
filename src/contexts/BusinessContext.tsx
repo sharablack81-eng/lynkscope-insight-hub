@@ -29,7 +29,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error("User not authenticated");
+        // User not authenticated - this is fine for public pages
+        setIsLoading(false);
+        return;
       }
 
       const { data: profile, error: fetchError } = await supabase
@@ -38,7 +40,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq('id', user.id)
         .single() as any;
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.warn('Profile fetch error (may not exist yet):', fetchError);
+        // Don't throw - profile might not exist yet
+      }
 
       setBusinessName(profile?.business_name || "");
       setBusinessNiche(profile?.business_niche || "");
