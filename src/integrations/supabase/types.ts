@@ -197,6 +197,8 @@ export type Database = {
           created_at: string
           id: string
           shop_domain: string | null
+          shopify_access_token: string | null
+          shopify_charge_id: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           trial_end_date: string
           trial_start_date: string
@@ -207,6 +209,8 @@ export type Database = {
           created_at?: string
           id?: string
           shop_domain?: string | null
+          shopify_access_token?: string | null
+          shopify_charge_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_end_date?: string
           trial_start_date?: string
@@ -217,6 +221,8 @@ export type Database = {
           created_at?: string
           id?: string
           shop_domain?: string | null
+          shopify_access_token?: string | null
+          shopify_charge_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_end_date?: string
           trial_start_date?: string
@@ -228,6 +234,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          business_name: string | null
+          business_niche: string | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -236,6 +244,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          business_name?: string | null
+          business_niche?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -244,6 +254,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          business_name?: string | null
+          business_niche?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
