@@ -22,6 +22,7 @@ const Premium = lazy(() => import("./pages/Premium"));
 const Automation = lazy(() => import("./pages/Automation"));
 const Tools = lazy(() => import("./pages/Tools"));
 const AdvancedAnalytics = lazy(() => import("./pages/AdvancedAnalytics"));
+const Cliplyst = lazy(() => import("./pages/Cliplyst"));
 const Redirect = lazy(() => import("./pages/Redirect"));
 const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 
@@ -104,6 +105,7 @@ const App = () => {
             <Route path="/automation" element={<ProtectedRoute><Automation /></ProtectedRoute>} />
             <Route path="/tools" element={<ProtectedRoute><Tools /></ProtectedRoute>} />
             <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
+            <Route path="/cliplyst" element={<ProtectedRoute><Cliplyst /></ProtectedRoute>} />
             {/* Routes configured above */}
             <Route path="*" element={<NotFound />} />
           </Routes>

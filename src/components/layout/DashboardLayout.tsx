@@ -12,7 +12,8 @@ import {
   Zap,
   Wrench,
   TrendingUp,
-  Clock
+  Clock,
+  Play
 } from "lucide-react";
 import { supabase } from "@/lib/backend";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: TrendingUp, label: "Advanced Analytics", path: "/advanced-analytics" },
     { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Wrench, label: "Tools", path: "/tools" },
+    { icon: Play, label: "Cliplyst", path: "/cliplyst" },
   ];
 
   return (

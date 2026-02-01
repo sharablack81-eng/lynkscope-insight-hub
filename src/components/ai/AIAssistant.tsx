@@ -153,6 +153,17 @@ export const AIAssistant = () => {
       const analysis = await analyzeMarketing(analyticsData);
       setAnalysisResult(analysis);
 
+      // Store user data for Cliplyst integration
+      const userDataForCliplyst = {
+        user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown',
+        business_name: analyticsData.businessName,
+        niche: analyticsData.businessNiche,
+        total_links: analyticsData.totalLinks,
+        total_clicks: analyticsData.totalClicks,
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem('lynkscope_user_analysis', JSON.stringify(userDataForCliplyst));
+
       // Replace loading message with analysis summary
       const summaryMessage: Message = {
         id: Date.now().toString(),
