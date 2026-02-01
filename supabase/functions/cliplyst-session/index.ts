@@ -9,8 +9,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Environment variables loaded from supabase/config.toml
 const CLIPLYST_API_URL = Deno.env.get('CLIPLYST_API_URL') || 'https://cliplyst-content-maker.onrender.com';
-const JWT_SECRET = Deno.env.get('JWT_SECRET') || 'your-jwt-secret-key-change-in-production';
+const JWT_SECRET = Deno.env.get('JWT_SECRET');
+const LYNKSCOPE_INTERNAL_KEY = Deno.env.get('LYNKSCOPE_INTERNAL_KEY');
+
+// Validate required environment variables
+if (!JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET environment variable is not configured');
+  throw new Error('JWT_SECRET must be set in Supabase Edge Functions environment');
+}
+
+if (!LYNKSCOPE_INTERNAL_KEY) {
+  console.error('ERROR: LYNKSCOPE_INTERNAL_KEY environment variable is not configured');
+  throw new Error('LYNKSCOPE_INTERNAL_KEY must be set in Supabase Edge Functions environment');
+}
 
 // Simple JWT creation (production should use a proper JWT library)
 async function createJWT(payload: Record<string, string | number>) {
