@@ -364,9 +364,9 @@ const Settings = () => {
         return;
       }
 
-      // Call via fetch with query param since supabase.functions.invoke doesn't support query params
+      // Cancel subscription via Stripe
       const response = await fetch(
-        `${BACKEND_URL}/functions/v1/shopify-billing?action=cancel`,
+        `${BACKEND_URL}/functions/v1/billing-cancel`,
         {
           method: 'POST',
           headers: {
@@ -648,7 +648,7 @@ const Settings = () => {
                     <div className="text-2xl font-bold text-foreground mb-1">
                       $20<span className="text-sm font-normal text-muted-foreground">/month</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Cancel anytime · Managed by Shopify</p>
+                    <p className="text-xs text-muted-foreground">Cancel anytime · Billed monthly via Stripe</p>
                   </div>
 
                   <Button

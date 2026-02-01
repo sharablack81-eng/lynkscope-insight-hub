@@ -35,32 +35,32 @@ export default function PrivacyPolicy() {
         <div className="prose prose-invert max-w-none space-y-8">
           <p className="text-muted-foreground">
             This Privacy Policy describes how Lynkscope ("the App", "we", "us", or
-            "our") collects, uses, and discloses information when merchants install
-            or use the App in connection with their Shopify stores.
+            "our") collects, uses, and discloses information when users create
+            an account and use the App.
           </p>
 
           <div className="border-t border-border pt-8">
             <h2 className="text-2xl font-semibold mb-4">1. Information We Collect</h2>
 
-            <h3 className="text-lg font-medium mb-2 text-primary">a. Store Information</h3>
+            <h3 className="text-lg font-medium mb-2 text-primary">a. Account Information</h3>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
-              <li>Store name and store URL</li>
-              <li>Store owner name and email address</li>
-              <li>Shopify store ID</li>
-              <li>Store currency, timezone, and plan type</li>
+              <li>Email address</li>
+              <li>Display name</li>
+              <li>Business name and niche (optional)</li>
+              <li>Account creation date</li>
             </ul>
 
             <h3 className="text-lg font-medium mb-2 text-primary">b. App Usage Data</h3>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
               <li>Feature usage and settings</li>
-              <li>Subscription status</li>
+              <li>Subscription status and plan</li>
               <li>Timestamps related to app activity</li>
             </ul>
 
             <h3 className="text-lg font-medium mb-2 text-primary">c. Billing Information</h3>
             <p className="text-muted-foreground">
-              Billing is handled entirely by Shopify. We do not store credit card
-              information.
+              Billing is handled by Stripe. We do not store credit card
+              information directly.
             </p>
           </div>
 

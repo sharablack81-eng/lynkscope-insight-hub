@@ -49,14 +49,13 @@ const Dashboard = () => {
   }, []);
 
   const handleChargeConfirmation = async () => {
-    const chargeId = searchParams.get('charge_id');
-    const userId = searchParams.get('user_id');
+    const sessionId = searchParams.get('session_id');
     
-    if (chargeId && userId) {
+    if (sessionId) {
       try {
-        // Confirm the charge via edge function
+        // Confirm the checkout session via edge function
         const response = await fetch(
-          `${BACKEND_URL}/functions/v1/shopify-billing?action=confirm-charge&charge_id=${chargeId}&user_id=${userId}`
+          `${BACKEND_URL}/functions/v1/billing-checkout?session_id=${sessionId}`
         );
         
         const result = await response.json();

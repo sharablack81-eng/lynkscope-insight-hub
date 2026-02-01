@@ -35,13 +35,13 @@ export default function TermsOfService() {
         <div className="prose prose-invert max-w-none space-y-8">
           <p className="text-muted-foreground">
             These Terms of Service ("Terms") govern your use of Lynkscope (the "App") provided by Lynkscope.
-            By installing or using the App, you agree to these Terms.
+            By creating an account and using the App, you agree to these Terms.
           </p>
 
           <div className="border-t border-border pt-8">
             <h2 className="text-2xl font-semibold mb-4">1. Use of the App</h2>
             <p className="text-muted-foreground mb-4">
-              You may use the App only in connection with a valid Shopify store and in compliance with Shopify's Terms of Service.
+              You may use the App only with a valid account and in compliance with all applicable laws.
             </p>
             <p className="text-muted-foreground mb-2">You agree not to:</p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
@@ -53,15 +53,15 @@ export default function TermsOfService() {
 
           <div className="border-t border-border pt-8">
             <h2 className="text-2xl font-semibold mb-4">2. Subscriptions & Billing</h2>
-            <p className="text-muted-foreground mb-2">The App may offer a free trial period.</p>
-            <p className="text-muted-foreground mb-2">Paid subscriptions are billed through Shopify's Billing API.</p>
-            <p className="text-muted-foreground mb-4">Pricing and trial duration are displayed before purchase.</p>
+            <p className="text-muted-foreground mb-2">The App may offer a free tier with limited features.</p>
+            <p className="text-muted-foreground mb-2">Paid subscriptions are billed monthly through Stripe.</p>
+            <p className="text-muted-foreground mb-4">Pricing and plan details are displayed before purchase.</p>
 
             <h3 className="text-lg font-medium mb-2 text-primary">Cancellation</h3>
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
               <li>You may cancel your subscription at any time through the App settings.</li>
-              <li>Cancellation takes effect immediately for billing purposes.</li>
-              <li>If cancelled before a free trial ends, remaining trial time may continue if applicable.</li>
+              <li>Cancellation takes effect at the end of your billing period.</li>
+              <li>You retain access to premium features until the current billing period ends.</li>
             </ul>
           </div>
 
