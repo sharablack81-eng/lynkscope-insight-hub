@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { CliplystActivationCard } from "@/components/cliplyst/CliplystActivationCard";
 import { CliplystEmbed } from "@/components/cliplyst/CliplystEmbed";
 import { requestCliplystSession, markCliplystActivated, isCliplystActivated } from "@/lib/cliplystEmbedService";
