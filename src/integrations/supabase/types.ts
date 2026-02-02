@@ -270,6 +270,7 @@ export type Database = {
           created_at: string
           id: string
           last_clicked_at: string | null
+          link_id: string | null
           original_url: string
           short_code: string
           user_id: string
@@ -279,6 +280,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_clicked_at?: string | null
+          link_id?: string | null
           original_url: string
           short_code: string
           user_id: string
@@ -288,11 +290,20 @@ export type Database = {
           created_at?: string
           id?: string
           last_clicked_at?: string | null
+          link_id?: string | null
           original_url?: string
           short_code?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "short_links_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       smart_link_clicks: {
         Row: {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, RotateCcw, Loader } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ interface ShortLinkDisplayProps {
 }
 
 interface ShortLink {
+  id: string;
   short_code: string;
   short_url: string;
   click_count: number;
@@ -20,6 +21,44 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
   const [shortLink, setShortLink] = useState<ShortLink | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  // Check for existing short link on mount
+  useEffect(() => {
+    checkExistingShortLink();
+  }, [originalUrl]);
+
+  const checkExistingShortLink = async () => {
+    setIsChecking(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setIsChecking(false);
+        return;
+      }
+
+      // Look for existing short link for this URL by this user
+      const { data: existing, error } = await (supabase as any)
+        .from('short_links')
+        .select('*')
+        .eq('original_url', originalUrl)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (!error && existing) {
+        setShortLink({
+          id: existing.id,
+          short_code: existing.short_code,
+          short_url: `${new URL(BACKEND_URL).origin}/functions/v1/short-link-redirect/${existing.short_code}`,
+          click_count: existing.click_count || 0,
+        });
+      }
+    } catch (err) {
+      console.error('Error checking existing short link:', err);
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   const createShortLink = async () => {
     setIsLoading(true);
@@ -39,7 +78,12 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
         const shortCode = Math.random().toString(36).substring(2, 8);
         const { data, error } = await (supabase as any)
           .from('short_links')
-          .insert({ short_code: shortCode, original_url: originalUrl, user_id: session.user.id })
+          .insert({ 
+            short_code: shortCode, 
+            original_url: originalUrl, 
+            user_id: session.user.id,
+            link_id: linkId || null // Associate with the parent link if provided
+          })
           .select()
           .single();
 
@@ -48,10 +92,9 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
           break;
         }
 
-        // Capture whatever came back for debugging (could be null/undefined)
         lastError = error || { message: 'No data returned from insert', details: data };
 
-        // If unique constraint failed, try again. Otherwise convert Supabase error to Error so it's surfaced.
+        // If unique constraint failed, try again. Otherwise throw.
         if (error && error.code !== '23505') {
           const msg = `${error.message || error.msg || 'Supabase error'}${error.code ? ` (${error.code})` : ''}`;
           throw new Error(msg);
@@ -66,6 +109,7 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
       }
 
       const shortLinkData: ShortLink = {
+        id: created.id,
         short_code: created.short_code,
         short_url: `${new URL(BACKEND_URL).origin}/functions/v1/short-link-redirect/${created.short_code}`,
         click_count: created.click_count || 0,
@@ -76,18 +120,8 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
       toast.success("Short link created!");
     } catch (error) {
       console.error('Error creating short link:', error);
-      // Log full error for debugging and show a trimmed, copyable message in the toast
-      try {
-        console.error('Short link create error raw:', error);
-        const serialized = JSON.stringify(error, Object.getOwnPropertyNames(error || {}), 2);
-        const message = error instanceof Error ? error.message : (serialized || 'Failed to create short link');
-        // Show concise message but allow copying full serialized object in console
-        toast.error(message.substring(0, 200));
-        // Also log serialized details to console for developer debugging
-        console.error('Short link create error (serialized):', serialized);
-      } catch (e) {
-        toast.error('Failed to create short link');
-      }
+      const message = error instanceof Error ? error.message : 'Failed to create short link';
+      toast.error(message.substring(0, 200));
     } finally {
       setIsLoading(false);
     }
@@ -100,10 +134,29 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
     }
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
+    // Delete existing short link first
+    if (shortLink?.id) {
+      try {
+        await (supabase as any)
+          .from('short_links')
+          .delete()
+          .eq('id', shortLink.id);
+      } catch (err) {
+        console.error('Error deleting old short link:', err);
+      }
+    }
     setShortLink(null);
     createShortLink();
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex items-center justify-center py-2">
+        <Loader className="w-4 h-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
