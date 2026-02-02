@@ -34,6 +34,7 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
       // Try inserting unique short code up to a few times
       let created: any = null;
       const maxAttempts = 5;
+      let lastError: any = null;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const shortCode = Math.random().toString(36).substring(2, 8);
         const { data, error } = await (supabase as any)
@@ -47,13 +48,21 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
           break;
         }
 
-        // If unique constraint failed, try again
+        lastError = error;
+
+        // If unique constraint failed, try again. Otherwise convert Supabase error to Error so it's surfaced.
         if (error && error.code !== '23505') {
-          throw error;
+          const msg = `${error.message || error.msg || 'Supabase error'}${error.code ? ` (${error.code})` : ''}`;
+          throw new Error(msg);
         }
       }
 
-      if (!created) throw new Error('Failed to create unique short link');
+      if (!created) {
+        const msg = lastError
+          ? `${lastError.message || lastError.msg || 'Failed to create short link'}${lastError.code ? ` (${lastError.code})` : ''}`
+          : 'Failed to create unique short link';
+        throw new Error(msg);
+      }
 
       const shortLinkData: ShortLink = {
         short_code: created.short_code,
@@ -66,7 +75,15 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
       toast.success("Short link created!");
     } catch (error) {
       console.error('Error creating short link:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create short link');
+      let message = 'Failed to create short link';
+      if (error instanceof Error) message = error.message;
+      else if (error && typeof error === 'object') {
+        // @ts-expect-error dynamic shape
+        message = error.message || error.msg || error.details || message;
+        // @ts-expect-error
+        if (error.code) message += ` (${error.code})`;
+      }
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
