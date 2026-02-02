@@ -162,15 +162,13 @@ const Links = () => {
     } catch (error) {
       console.error('Error saving link:', error);
       let errorMessage = "Failed to save link";
-      // Supabase error objects often have .message, .details, and .code
-      if (error && typeof error === 'object') {
-        // @ts-expect-error dynamic shape
-        const maybeMessage = error.message || error.msg || error.details;
-        // @ts-expect-error
-        const code = error.code || error.status;
-        if (maybeMessage) errorMessage = `${maybeMessage}${code ? ` (${code})` : ''}`;
-      } else if (error instanceof Error) {
+      if (error instanceof Error) {
         errorMessage = error.message;
+      } else if (error && typeof error === 'object') {
+        const e = error as Record<string, unknown>;
+        const maybeMessage = e.message || e.msg || e.details;
+        const code = e.code || e.status;
+        if (maybeMessage) errorMessage = `${maybeMessage}${code ? ` (${code})` : ''}`;
       }
       toast.error(errorMessage);
     }
