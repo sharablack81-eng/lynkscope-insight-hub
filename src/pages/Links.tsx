@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import LinkCard from "@/components/links/LinkCard";
 import AddLinkModal from "@/components/links/AddLinkModal";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { supabase } from "@/lib/backend";
+import { supabase, BACKEND_URL } from "@/lib/backend";
 
 export interface Link {
   id: string;
@@ -128,17 +128,27 @@ const Links = () => {
         // Generate a short code
         const shortCode = Math.random().toString(36).substring(2, 8);
 
-        const { error } = await supabase
-          .from('links')
-          .insert({
+        // Use Edge Function to create link (bypasses RLS issues)
+        const response = await fetch(`${BACKEND_URL}/functions/v1/create-link`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             title: linkData.title,
             url: linkData.url,
             platform: linkData.platform,
             short_code: shortCode,
             user_id: session.user.id,
-          });
+          }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create link');
+        }
+
         toast.success("Link created successfully!");
       }
 
