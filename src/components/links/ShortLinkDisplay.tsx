@@ -36,14 +36,14 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
       const maxAttempts = 5;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const shortCode = Math.random().toString(36).substring(2, 8);
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('short_links')
           .insert({ short_code: shortCode, original_url: originalUrl, user_id: session.user.id })
           .select()
           .single();
 
         if (!error && data) {
-          created = { ...data, short_code };
+          created = { ...data, short_code: shortCode };
           break;
         }
 
