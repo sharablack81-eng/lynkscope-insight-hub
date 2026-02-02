@@ -42,7 +42,21 @@ export async function requestCliplystSession(accessToken: string): Promise<Clipl
       throw new Error(errorData.error || `Failed to create session: ${response.status}`);
     }
 
-    const result: CliplystSessionResponse = await response.json();
+    // Read response as text first to handle empty or invalid JSON bodies
+    const text = await response.text();
+
+    if (!text) {
+      console.error('[Cliplyst Embed] Empty response body');
+      throw new Error(`Empty response body (HTTP ${response.status})`);
+    }
+
+    let result: CliplystSessionResponse;
+    try {
+      result = JSON.parse(text) as CliplystSessionResponse;
+    } catch (err) {
+      console.error('[Cliplyst Embed] Invalid JSON response:', text);
+      throw new Error('Invalid JSON in Cliplyst session response');
+    }
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to create Cliplyst session');
