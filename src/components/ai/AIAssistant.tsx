@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase, BACKEND_URL } from "@/lib/backend";
+import { AnalysisDisplay } from "./AnalysisDisplay";
 
 interface Message {
   id: string;
@@ -311,14 +312,8 @@ export const AIAssistant = () => {
             )}
 
             {analysisResult && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <Button
-                  onClick={handleSendToCliplyst}
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
-                  size="sm"
-                >
-                  Send this data to Cliplyst for content generation
-                </Button>
+              <div className="mt-4 pt-4 border-t border-gray-200 w-full">
+                <AnalysisDisplay analysis={analysisResult} />
               </div>
             )}
 

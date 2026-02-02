@@ -39,11 +39,66 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function generateFallbackAnalysis(analyticsData: AnalyticsData): Promise<AnalysisResult> {
+  // Generate analysis based on data patterns without AI
+  const platformEntries = Object.entries(analyticsData.platformBreakdown)
+    .sort((a, b) => b[1].clicks - a[1].clicks);
+  
+  const platformRanking = platformEntries.map(([platform, data]) => {
+    const score = Math.min(100, Math.max(0, Math.round((data.clicks / (analyticsData.totalClicks || 1)) * 150)));
+    let performance: 'excellent' | 'good' | 'fair' | 'poor' = 'fair';
+    if (score >= 80) performance = 'excellent';
+    else if (score >= 60) performance = 'good';
+    else if (score >= 40) performance = 'fair';
+    else performance = 'poor';
+    
+    const recommendation = 
+      performance === 'excellent' ? `Continue leveraging ${platform} - it's your strongest platform`
+      : performance === 'good' ? `${platform} is performing well - consider optimizing further`
+      : performance === 'fair' ? `${platform} needs more attention - try new content types`
+      : `${platform} needs a strategy overhaul - experiment with different content`;
+    
+    return { platform, score, clicks: data.clicks, performance, recommendation };
+  });
+
+  const summary = analyticsData.totalClicks > 0 
+    ? `Your marketing performance shows ${analyticsData.totalClicks} total clicks across ${analyticsData.totalLinks} links. ${platformRanking[0]?.platform || 'Unknown'} is your top performer with ${platformRanking[0]?.clicks || 0} clicks.`
+    : 'You have no clicks yet. Start by creating links and sharing them to generate engagement data.';
+
+  const topPerformingContent = analyticsData.topPerformers.length > 0
+    ? `"${analyticsData.topPerformers[0].title}" on ${analyticsData.topPerformers[0].platform} with ${analyticsData.topPerformers[0].clicks} clicks`
+    : 'No data available yet';
+
+  const underperformingAreas = analyticsData.underperformers.length > 0
+    ? `Focus on underperforming links: ${analyticsData.underperformers.map(u => `"${u.title}"`).join(', ')}`
+    : 'All your content is performing well!';
+
+  const suggestions = [
+    'Test new content types on your top platform',
+    'Analyze what makes your top content successful',
+    'Experiment with posting times and frequency',
+    'Get feedback from your audience'
+  ];
+
+  const nextSteps = `1. Promote your top-performing links more\n2. Revise content strategy for underperformers\n3. Expand what's working on ${platformRanking[0]?.platform || 'your best platform'}\n4. Monitor trends and adjust accordingly`;
+
+  return {
+    summary,
+    platformRanking,
+    keyInsights: {
+      topPerformingContent,
+      underperformingAreas,
+      suggestions
+    },
+    nextSteps
+  };
+}
+
 async function callOpenAIAPI(analyticsData: AnalyticsData): Promise<AnalysisResult> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
-    console.error('OPENAI_API_KEY environment variable is not set');
-    throw new Error('OpenAI API key is not configured. Please add OPENAI_API_KEY to Supabase function environment variables.');
+    console.warn('OPENAI_API_KEY not configured - using fallback analysis');
+    return generateFallbackAnalysis(analyticsData);
   }
 
   const prompt = `Analyze this marketing data and respond with ONLY valid JSON, no other text.
@@ -119,7 +174,9 @@ Output JSON:
     }
   }
 
-  throw lastError || new Error('Failed to get analysis after multiple attempts');
+  // If all OpenAI retries failed, fall back to local analysis
+  console.warn('OpenAI API failed after retries, using fallback analysis:', lastError?.message);
+  return generateFallbackAnalysis(analyticsData);
 }
 
 serve(async (req: Request) => {

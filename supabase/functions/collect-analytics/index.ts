@@ -63,71 +63,77 @@ serve(async (req: Request) => {
 
     if (profileError) throw profileError;
 
-    // Fetch user's links with click counts
+    // Fetch user's links
     const { data: links, error: linksError } = await supabase
       .from('links')
-      .select(
-        `
-        id,
-        title,
-        url,
-        platform,
-        link_clicks (count)
-      `
-      )
+      .select('id, title, url, platform, created_at')
       .eq('user_id', userId);
 
     if (linksError) throw linksError;
 
-    // Fetch click analytics
-    const { data: clicks, error: clicksError } = await supabase
-      .from('link_clicks')
-      .select('link_id, clicked_at')
-      .in('link_id', (links || []).map(l => l.id));
+    // Get all clicks from smart_link_clicks (single source of truth)
+    // Filter to last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: allClicks, error: clicksError } = await supabase
+      .from('smart_link_clicks')
+      .select('id, link_id, clicked_at, destination_url, browser, device_type, country, continent')
+      .gte('clicked_at', thirtyDaysAgo.toISOString());
 
     if (clicksError) throw clicksError;
 
-    // Aggregate analytics
-    const platformBreakdown: Record<string, { clicks: number; links: number; ctr: number }> = {};
+    // Aggregate analytics by link_id
+    const linkClicksMap: Record<string, any[]> = {};
     let totalClicks = 0;
-    let totalLinks = 0;
 
-    if (links && links.length > 0) {
-      totalLinks = links.length;
-
-      for (const link of links) {
-        const linkClicks = link.link_clicks?.[0]?.count || 0;
-        totalClicks += linkClicks;
-
-        const platform = link.platform || 'Unknown';
-        if (!platformBreakdown[platform]) {
-          platformBreakdown[platform] = { clicks: 0, links: 0, ctr: 0 };
+    if (allClicks && allClicks.length > 0) {
+      totalClicks = allClicks.length;
+      for (const click of allClicks) {
+        if (click.link_id) {
+          if (!linkClicksMap[click.link_id]) {
+            linkClicksMap[click.link_id] = [];
+          }
+          linkClicksMap[click.link_id].push(click);
         }
-        platformBreakdown[platform].clicks += linkClicks;
-        platformBreakdown[platform].links += 1;
       }
     }
 
+    // Build platform breakdown and link performance
+    const platformBreakdown: Record<string, { clicks: number; links: number; ctr: number }> = {};
+    const linkPerformance = (links || []).map(link => {
+      const linkClicks = linkClicksMap[link.id] || [];
+      const platform = link.platform || 'Other';
+      
+      if (!platformBreakdown[platform]) {
+        platformBreakdown[platform] = { clicks: 0, links: 0, ctr: 0 };
+      }
+      platformBreakdown[platform].clicks += linkClicks.length;
+      platformBreakdown[platform].links += 1;
+
+      return {
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        platform: platform,
+        clicks: linkClicks.length,
+      };
+    });
+
+    const totalLinks = links?.length || 0;
+
     // Calculate CTR for each platform
     Object.values(platformBreakdown).forEach(data => {
-      data.ctr = data.links > 0 ? data.clicks / (data.links * 100) : 0; // Assuming 100 impressions per link as baseline
+      data.ctr = data.links > 0 ? (data.clicks / data.links) : 0;
     });
 
     // Find top and underperformers
-    const linkPerformance = (links || []).map(link => ({
-      id: link.id,
-      title: link.title,
-      url: link.url,
-      platform: link.platform,
-      clicks: link.link_clicks?.[0]?.count || 0,
-    }));
-
     linkPerformance.sort((a, b) => b.clicks - a.clicks);
 
     const topPerformers = linkPerformance.slice(0, 5);
-    const underperformers = linkPerformance.slice(-5).filter(p => p.clicks === 0 || p.clicks < topPerformers[0]?.clicks / 2);
+    const underperformers = linkPerformance.slice(-5).reverse().filter(p => p.clicks < (topPerformers[0]?.clicks || 1) / 2);
 
-    const averageCtr = totalLinks > 0 ? totalClicks / (totalLinks * 100) : 0;
+    const averageCtr = totalLinks > 0 ? (totalClicks / totalLinks) : 0;
 
     const analytics: UserAnalytics = {
       businessName: profile?.business_name || 'Your Business',

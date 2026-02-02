@@ -64,6 +64,7 @@ export const AnalysisDisplay = ({ analysis }: { analysis: AnalysisResult }) => {
   const [sendingToCliplyst, setSendingToCliplyst] = useState(false);
   const [cliplystStatus, setCliplystStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [cliplystMessage, setCliplystMessage] = useState('');
+  const [expandedInsights, setExpandedInsights] = useState(false);
 
   const weakPlatforms = analysis.platformRanking
     .filter(p => p.performance === 'poor' || p.performance === 'fair')
@@ -118,42 +119,35 @@ export const AnalysisDisplay = ({ analysis }: { analysis: AnalysisResult }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 max-w-sm">
       {/* Summary */}
-      <Card className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200">
-        <p className="text-sm text-gray-800 leading-relaxed">{analysis.summary}</p>
+      <Card className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200">
+        <p className="text-xs text-gray-800 leading-relaxed">{analysis.summary}</p>
       </Card>
 
-      {/* Platform Rankings */}
+      {/* Platform Rankings - Compact */}
       <div>
-        <h4 className="font-semibold text-sm mb-3 text-gray-800">Platform Performance Rankings</h4>
-        <div className="space-y-2">
-          {analysis.platformRanking.map((platform, idx) => (
+        <h4 className="font-semibold text-xs mb-2 text-gray-800">Platform Rankings</h4>
+        <div className="space-y-1">
+          {analysis.platformRanking.slice(0, 3).map((platform, idx) => (
             <Card
               key={platform.platform}
-              className={`p-3 border-l-4 border-l-purple-500 ${getPerformanceColor(platform.performance)}`}
+              className={`p-2 border-l-4 border-l-purple-500 ${getPerformanceColor(platform.performance)}`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{idx + 1}. {platform.platform}</span>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded ${getPerformanceTextColor(platform.performance)} bg-white`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-xs truncate">{platform.platform}</span>
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded whitespace-nowrap ${getPerformanceTextColor(platform.performance)} bg-white`}>
                       {getScoreLabel(platform.score)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">{platform.recommendation}</p>
                 </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1 justify-end">
-                    <span className="text-lg font-bold text-gray-800">{platform.score}</span>
-                    <span className="text-xs text-gray-500">/100</span>
-                  </div>
-                  <p className="text-xs text-gray-500">{platform.clicks} clicks</p>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xs font-bold text-gray-800">{platform.score}/100</div>
                 </div>
               </div>
-
-              {/* Score Bar */}
-              <div className="mt-2 bg-gray-200 h-1.5 rounded-full overflow-hidden">
+              <div className="mt-1 bg-gray-200 h-1 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${
                     platform.performance === 'excellent'
@@ -172,102 +166,98 @@ export const AnalysisDisplay = ({ analysis }: { analysis: AnalysisResult }) => {
         </div>
       </div>
 
-      {/* Key Insights */}
-      <div>
-        <h4 className="font-semibold text-sm mb-3 text-gray-800">Key Insights</h4>
+      {/* Key Insights - Collapsible */}
+      <Button
+        onClick={() => setExpandedInsights(!expandedInsights)}
+        variant="outline"
+        size="sm"
+        className="w-full text-xs h-8"
+      >
+        {expandedInsights ? 'Hide' : 'Show'} Detailed Insights
+      </Button>
 
-        <div className="space-y-3">
+      {expandedInsights && (
+        <div className="space-y-2">
           {/* Top Performing */}
-          <Card className="p-3 bg-green-50 border border-green-200">
-            <div className="flex items-start gap-2">
-              <TrendingUp size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-green-900">Top Performing Content</p>
-                <p className="text-xs text-green-800 mt-1">{analysis.keyInsights.topPerformingContent}</p>
+          <Card className="p-2 bg-green-50 border border-green-200">
+            <div className="flex items-start gap-1.5">
+              <TrendingUp size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-green-900">Top Content</p>
+                <p className="text-xs text-green-800 mt-0.5 line-clamp-2">{analysis.keyInsights.topPerformingContent}</p>
               </div>
             </div>
           </Card>
 
           {/* Underperforming */}
-          <Card className="p-3 bg-red-50 border border-red-200">
-            <div className="flex items-start gap-2">
-              <TrendingDown size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-red-900">Underperforming Areas</p>
-                <p className="text-xs text-red-800 mt-1">{analysis.keyInsights.underperformingAreas}</p>
+          <Card className="p-2 bg-red-50 border border-red-200">
+            <div className="flex items-start gap-1.5">
+              <TrendingDown size={14} className="text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-red-900">Needs Work</p>
+                <p className="text-xs text-red-800 mt-0.5 line-clamp-2">{analysis.keyInsights.underperformingAreas}</p>
               </div>
             </div>
           </Card>
 
-          {/* Suggestions */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle size={16} className="text-blue-600" />
-              <p className="text-xs font-semibold text-blue-900">Recommended Actions</p>
-            </div>
-            <ul className="space-y-1">
-              {analysis.keyInsights.suggestions.map((suggestion, idx) => (
-                <li key={idx} className="text-xs text-gray-700 bg-blue-50 p-2 rounded border border-blue-200">
-                  • {suggestion}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Next Steps */}
-          <Card className="p-3 bg-indigo-50 border border-indigo-200">
-            <p className="text-xs font-semibold text-indigo-900">Next Steps</p>
-            <p className="text-xs text-indigo-800 mt-1">{analysis.nextSteps}</p>
-          </Card>
-
-          {/* Cliplyst Integration */}
-          {isCliplystConfigured() && (
-            <Card className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Zap size={18} className="text-orange-600" />
-                  <p className="text-sm font-semibold text-orange-900">Ready for Automated Content</p>
+          {/* Top Suggestion */}
+          {analysis.keyInsights.suggestions.length > 0 && (
+            <Card className="p-2 bg-blue-50 border border-blue-200">
+              <div className="flex items-start gap-1.5">
+                <AlertCircle size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-blue-900">Action</p>
+                  <p className="text-xs text-blue-800 mt-0.5">{analysis.keyInsights.suggestions[0]}</p>
                 </div>
-                <p className="text-xs text-orange-800">
-                  Send this strategy to Cliplyst to automatically generate and schedule content for your weak platforms.
-                </p>
-
-                {/* Cliplyst Status Message */}
-                {cliplystStatus !== 'idle' && (
-                  <div
-                    className={`text-xs p-2 rounded border ${
-                      cliplystStatus === 'success'
-                        ? 'bg-green-50 border-green-200 text-green-700'
-                        : cliplystStatus === 'error'
-                        ? 'bg-red-50 border-red-200 text-red-700'
-                        : 'bg-blue-50 border-blue-200 text-blue-700'
-                    }`}
-                  >
-                    {cliplystMessage}
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleSendToCliplyst}
-                  disabled={sendingToCliplyst || cliplystStatus === 'success'}
-                  className={`w-full h-9 text-sm font-semibold gap-2 ${
-                    cliplystStatus === 'success'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-orange-600 hover:bg-orange-700'
-                  }`}
-                >
-                  <Send size={16} />
-                  {cliplystStatus === 'success'
-                    ? 'Content Automation Started'
-                    : sendingToCliplyst
-                    ? 'Sending...'
-                    : 'Generate Content with Cliplyst'}
-                </Button>
               </div>
             </Card>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Cliplyst Integration - Compact */}
+      {isCliplystConfigured() && (
+        <Card className="p-2 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300">
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Zap size={14} className="text-orange-600" />
+              <p className="text-xs font-semibold text-orange-900">Auto Content Ready</p>
+            </div>
+
+            {cliplystStatus !== 'idle' && (
+              <div
+                className={`text-xs p-1.5 rounded border ${
+                  cliplystStatus === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-700'
+                    : cliplystStatus === 'error'
+                    ? 'bg-red-50 border-red-200 text-red-700'
+                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                }`}
+              >
+                {cliplystMessage}
+              </div>
+            )}
+
+            <Button
+              onClick={handleSendToCliplyst}
+              disabled={sendingToCliplyst || cliplystStatus === 'success'}
+              size="sm"
+              className={`w-full h-7 text-xs gap-1 ${
+                cliplystStatus === 'success'
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-orange-600 hover:bg-orange-700'
+              }`}
+            >
+              <Send size={12} />
+              {cliplystStatus === 'success'
+                ? 'Started'
+                : sendingToCliplyst
+                ? 'Sending...'
+                : 'Generate Content'}
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
