@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, Sparkles, LogOut } from "lucide-react";
+import { Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeModal from "./UpgradeModal";
@@ -46,40 +46,27 @@ const TrialExpiredScreen = ({ onUninstall }: TrialExpiredScreenProps) => {
             Your trial has ended
           </h1>
           <p className="text-muted-foreground mb-8">
-            Activate Pro to keep your analytics live and continue tracking your links.
+            Upgrade to Pro to keep your analytics live and continue tracking your links.
           </p>
 
           {/* Pricing highlight */}
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
             <div className="text-2xl font-bold text-foreground">
-              $20<span className="text-base font-normal text-muted-foreground">/month</span>
+              $9<span className="text-base font-normal text-muted-foreground">/month</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Cancel anytime · Managed by Shopify
+              Billed monthly via Stripe • Cancel anytime
             </p>
           </div>
 
           {/* Actions */}
-          <div className="space-y-3">
-            <Button 
-              onClick={() => setShowUpgrade(true)}
-              className="w-full bg-primary hover:bg-primary/90 glow-purple h-12 text-base"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Upgrade to Pro for Full Access
-            </Button>
-            
-            {onUninstall && (
-              <Button 
-                variant="ghost" 
-                onClick={onUninstall}
-                className="w-full text-muted-foreground hover:text-destructive"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Uninstall App
-              </Button>
-            )}
-          </div>
+          <Button 
+            onClick={() => setShowUpgrade(true)}
+            className="w-full bg-primary hover:bg-primary/90 glow-purple h-12 text-base"
+          >
+            <Sparkles className="w-5 h-5 mr-2" />
+            Upgrade to Pro for Full Access
+          </Button>
         </motion.div>
       </motion.div>
 

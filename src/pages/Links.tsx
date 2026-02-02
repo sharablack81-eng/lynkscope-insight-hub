@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import LinkCard from "@/components/links/LinkCard";
 import AddLinkModal from "@/components/links/AddLinkModal";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { supabase, BACKEND_URL } from "@/lib/backend";
+import { supabase } from "@/lib/backend";
 
 export interface Link {
   id: string;
@@ -121,34 +121,20 @@ const Links = () => {
         if (error) throw error;
         toast.success("Link updated successfully!");
       } else {
-        // Add new link
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || !session.user) throw new Error('Authentication required. Please log in.');
-
-        // Generate a short code
+        // Add new link - just insert directly with user_id
+        // The RLS policy will check auth.uid() matches user_id
         const shortCode = Math.random().toString(36).substring(2, 8);
 
-        // Use Edge Function to create link (bypasses RLS issues)
-        const response = await fetch(`${BACKEND_URL}/functions/v1/create-link`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const { error } = await supabase
+          .from('links')
+          .insert({
             title: linkData.title,
             url: linkData.url,
             platform: linkData.platform,
             short_code: shortCode,
-            user_id: session.user.id,
-          }),
-        });
+          });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to create link');
-        }
-
+        if (error) throw error;
         toast.success("Link created successfully!");
       }
 
@@ -159,13 +145,7 @@ const Links = () => {
       console.error('Error saving link:', error);
       let errorMessage = "Failed to save link";
       if (error instanceof Error) {
-        if (error.message.includes('Authentication')) {
-          errorMessage = "Authentication required. Please log in.";
-        } else if (error.message.includes('user')) {
-          errorMessage = "User not found. Please log in again.";
-        } else {
-          errorMessage = error.message;
-        }
+        errorMessage = error.message;
       }
       toast.error(errorMessage);
     }

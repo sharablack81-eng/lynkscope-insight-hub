@@ -30,14 +30,14 @@ export const useSubscription = (): SubscriptionState => {
           return;
         }
 
-        const { data: merchant, error } = await supabase
-          .from("merchants")
-          .select("subscription_status, trial_end_date")
+        const { data: subscription, error } = await supabase
+          .from("subscriptions")
+          .select("status, trial_end_date")
           .eq("user_id", user.id)
           .single();
 
-        if (error || !merchant) {
-          // Default to trial if no merchant record found
+        if (error || !subscription) {
+          // Default to trial if no subscription record found
           setState({
             status: "trial",
             daysRemaining: 14,
@@ -48,12 +48,12 @@ export const useSubscription = (): SubscriptionState => {
           return;
         }
 
-        const trialEnd = new Date(merchant.trial_end_date);
+        const trialEnd = new Date(subscription.trial_end_date);
         const now = new Date();
         const daysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
         
         // Check if trial has expired
-        let status = merchant.subscription_status as SubscriptionStatus;
+        let status = subscription.status as SubscriptionStatus;
         if (status === "trial" && daysRemaining <= 0) {
           status = "expired";
         }
