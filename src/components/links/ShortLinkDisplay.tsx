@@ -48,7 +48,8 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
           break;
         }
 
-        lastError = error;
+        // Capture whatever came back for debugging (could be null/undefined)
+        lastError = error || { message: 'No data returned from insert', details: data };
 
         // If unique constraint failed, try again. Otherwise convert Supabase error to Error so it's surfaced.
         if (error && error.code !== '23505') {
@@ -75,15 +76,18 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
       toast.success("Short link created!");
     } catch (error) {
       console.error('Error creating short link:', error);
-      let message = 'Failed to create short link';
-      if (error instanceof Error) message = error.message;
-      else if (error && typeof error === 'object') {
-        // @ts-expect-error dynamic shape
-        message = error.message || error.msg || error.details || message;
-        // @ts-expect-error
-        if (error.code) message += ` (${error.code})`;
+      // Log full error for debugging and show a trimmed, copyable message in the toast
+      try {
+        console.error('Short link create error raw:', error);
+        const serialized = JSON.stringify(error, Object.getOwnPropertyNames(error || {}), 2);
+        const message = error instanceof Error ? error.message : (serialized || 'Failed to create short link');
+        // Show concise message but allow copying full serialized object in console
+        toast.error(message.substring(0, 200));
+        // Also log serialized details to console for developer debugging
+        console.error('Short link create error (serialized):', serialized);
+      } catch (e) {
+        toast.error('Failed to create short link');
       }
-      toast.error(message);
     } finally {
       setIsLoading(false);
     }
