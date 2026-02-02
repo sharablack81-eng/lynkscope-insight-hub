@@ -121,26 +121,38 @@ const Links = () => {
         if (error) throw error;
         toast.success("Link updated successfully!");
       } else {
-        // Add new link - just insert directly with user_id
-        // The RLS policy will check auth.uid() matches user_id
+        // Add new link - ensure session present and include user_id
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || !session.user) {
           throw new Error('You must be logged in to create a link');
         }
 
-        const shortCode = Math.random().toString(36).substring(2, 8);
+        // Try inserting unique short code up to a few times to avoid collisions
+        let insertError = null;
+        const maxAttempts = 5;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const shortCode = Math.random().toString(36).substring(2, 8);
+          const { error } = await supabase
+            .from('links')
+            .insert({
+              title: linkData.title,
+              url: linkData.url,
+              platform: linkData.platform,
+              short_code: shortCode,
+              user_id: session.user.id,
+            });
 
-        const { error } = await supabase
-          .from('links')
-          .insert({
-            title: linkData.title,
-            url: linkData.url,
-            platform: linkData.platform,
-            short_code: shortCode,
-            user_id: session.user.id,
-          });
+          if (!error) {
+            insertError = null;
+            break;
+          }
 
-        if (error) throw error;
+          insertError = error;
+          // If unique constraint failed, try again. Otherwise break and surface error.
+          if (error.code !== '23505') break;
+        }
+
+        if (insertError) throw insertError;
         toast.success("Link created successfully!");
       }
 
@@ -150,7 +162,14 @@ const Links = () => {
     } catch (error) {
       console.error('Error saving link:', error);
       let errorMessage = "Failed to save link";
-      if (error instanceof Error) {
+      // Supabase error objects often have .message, .details, and .code
+      if (error && typeof error === 'object') {
+        // @ts-expect-error dynamic shape
+        const maybeMessage = error.message || error.msg || error.details;
+        // @ts-expect-error
+        const code = error.code || error.status;
+        if (maybeMessage) errorMessage = `${maybeMessage}${code ? ` (${code})` : ''}`;
+      } else if (error instanceof Error) {
         errorMessage = error.message;
       }
       toast.error(errorMessage);
