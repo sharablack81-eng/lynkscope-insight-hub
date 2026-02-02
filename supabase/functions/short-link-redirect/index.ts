@@ -1,8 +1,6 @@
 // @ts-nocheck
-// @deno-types="https://deno.land/std@0.208.0/http/server.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// @deno-types="https://esm.sh/@supabase/supabase-js@2/dist/module/index.d.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,7 +98,7 @@ serve(async (req: Request) => {
       }
     }
 
-    // Increment click count and update last clicked timestamp
+    // Increment click count on short_links table
     const { error: updateError } = await supabaseClient
       .from('short_links')
       .update({
@@ -110,15 +108,16 @@ serve(async (req: Request) => {
       .eq('id', shortLink.id);
 
     if (updateError) {
-      console.error('Error updating click count:', updateError);
+      console.error('Error updating short link click count:', updateError);
     }
 
-    // Record the click in smart_link_clicks for analytics (with link_id if available)
+    // Record the click in smart_link_clicks for unified analytics
+    // Use the link_id from short_links if available (to count toward parent link's analytics)
     const { error: clickError } = await supabaseClient
       .from('smart_link_clicks')
       .insert({
         destination_url: shortLink.original_url,
-        link_id: null, // Short links are independent of regular links
+        link_id: shortLink.link_id || null, // Associate with parent link if exists
         merchant_id: shortLink.user_id,
         referrer: referrer,
         user_agent: userAgent,
