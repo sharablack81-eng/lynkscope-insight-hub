@@ -15,6 +15,6 @@ verify_jwt = false
 # Cliplyst Integration Environment Variables
 [functions.cliplyst-session]
 verify_jwt = false
-CLIPLYST_API_URL = "https://cliplyst-content-maker.onrender.com"
+CLIPLYST_API_URL = "https://cliplyst-content-maker-4qd6.onrender.com"
 JWT_SECRET = "0123456789abcdef0123456789abcdef"
 LYNKSCOPE_INTERNAL_KEY = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"

@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Environment variables loaded from supabase/config.toml
-const CLIPLYST_API_URL = Deno.env.get('CLIPLYST_API_URL') || 'https://cliplyst-content-maker.onrender.com';
+const CLIPLYST_API_URL = Deno.env.get('CLIPLYST_API_URL') || 'https://cliplyst-content-maker-4qd6.onrender.com';
 const JWT_SECRET = Deno.env.get('JWT_SECRET');
 const LYNKSCOPE_INTERNAL_KEY = Deno.env.get('LYNKSCOPE_INTERNAL_KEY');
 

@@ -3,7 +3,7 @@
  * Handles JWT token generation and Cliplyst session initiation
  */
 
-const CLIPLYST_API_URL = import.meta.env.VITE_CLIPLYST_API_URL || 'https://cliplyst-content-maker.onrender.com';
+const CLIPLYST_API_URL = import.meta.env.VITE_CLIPLYST_API_URL || 'https://cliplyst-content-maker-4qd6.onrender.com';
 const BACKEND_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export interface CliplystSessionResponse {

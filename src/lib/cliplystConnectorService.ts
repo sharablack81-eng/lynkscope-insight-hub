@@ -3,7 +3,7 @@
  * Sends content strategy from Lynkscope to Cliplyst for automated content generation
  */
 
-const CLIPLYST_API_URL = import.meta.env.VITE_CLIPLYST_API_URL || 'https://cliplyst-content-maker.onrender.com';
+const CLIPLYST_API_URL = import.meta.env.VITE_CLIPLYST_API_URL || 'https://cliplyst-content-maker-4qd6.onrender.com';
 const LYNKSCOPE_INTERNAL_KEY = import.meta.env.VITE_LYNKSCOPE_INTERNAL_KEY;
 
 export interface CliplystPayload {
