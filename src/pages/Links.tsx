@@ -122,8 +122,8 @@ const Links = () => {
         toast.success("Link updated successfully!");
       } else {
         // Add new link
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !session.user) throw new Error('Authentication required. Please log in.');
 
         // Generate a short code
         const shortCode = Math.random().toString(36).substring(2, 8);
@@ -135,7 +135,7 @@ const Links = () => {
             url: linkData.url,
             platform: linkData.platform,
             short_code: shortCode,
-            user_id: user.id,
+            user_id: session.user.id,
           });
 
         if (error) throw error;
@@ -147,7 +147,17 @@ const Links = () => {
       setSelectedLink(null);
     } catch (error) {
       console.error('Error saving link:', error);
-      toast.error("Failed to save link");
+      let errorMessage = "Failed to save link";
+      if (error instanceof Error) {
+        if (error.message.includes('Authentication')) {
+          errorMessage = "Authentication required. Please log in.";
+        } else if (error.message.includes('user')) {
+          errorMessage = "User not found. Please log in again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 
