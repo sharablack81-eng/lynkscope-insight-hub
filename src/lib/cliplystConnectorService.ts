@@ -3,10 +3,11 @@
  * Sends content strategy from Lynkscope to Cliplyst for automated content generation
  */
 
-const CLIPLYST_BASE_URL = 'https://hnkrklkozvgwjfxeearh.supabase.co/functions/v1';
-const CLIPLYST_HEALTH_URL = `${CLIPLYST_BASE_URL}/lynkscope-health`;
-const CLIPLYST_CREATE_JOB_URL = `${CLIPLYST_BASE_URL}/lynkscope-create-job`;
-const CLIPLYST_GET_STATUS_URL = `${CLIPLYST_BASE_URL}/lynkscope-job-status`;
+// Cliplyst API endpoints (configurable via environment variables)
+const CLIPLYST_BASE_URL = import.meta.env.VITE_CLIPLYST_BASE_URL || 'https://hnkrklkozvgwjfxeearh.supabase.co/functions/v1';
+const CLIPLYST_HEALTH_URL = import.meta.env.VITE_CLIPLYST_HEALTH_URL || `${CLIPLYST_BASE_URL}/lynkscope-health`;
+const CLIPLYST_CREATE_JOB_URL = import.meta.env.VITE_CLIPLYST_CREATE_JOB_URL || `${CLIPLYST_BASE_URL}/lynkscope-create-job`;
+const CLIPLYST_GET_STATUS_URL = import.meta.env.VITE_CLIPLYST_GET_STATUS_URL || `${CLIPLYST_BASE_URL}/lynkscope-job-status`;
 const LYNKSCOPE_INTERNAL_KEY = import.meta.env.VITE_LYNKSCOPE_INTERNAL_KEY;
 
 export interface CliplystPayload {
