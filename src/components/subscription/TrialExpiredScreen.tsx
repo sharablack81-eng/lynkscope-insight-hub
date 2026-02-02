@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,8 +22,15 @@ const TrialExpiredScreen = ({ onUninstall }: TrialExpiredScreenProps) => {
     setDismissed(v === '1');
   }, []);
 
+  const location = useLocation();
+
   // Only show if trial has expired
   if (isLoading || status === "trial" || status === "active") {
+    return null;
+  }
+
+  // Allow full access to Settings page so account deletion can proceed
+  if (location.pathname === "/settings") {
     return null;
   }
 
