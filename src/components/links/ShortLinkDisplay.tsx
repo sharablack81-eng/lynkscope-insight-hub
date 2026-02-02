@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, RotateCcw, Loader } from "lucide-react";
 import { toast } from "sonner";
-import { BACKEND_URL, BACKEND_ANON_KEY } from "@/lib/backend";
+import { supabase, BACKEND_URL } from "@/lib/backend";
 
 interface ShortLinkDisplayProps {
   originalUrl: string;
@@ -24,42 +24,45 @@ const ShortLinkDisplay = ({ originalUrl, linkId, onShortLinkCreated }: ShortLink
   const createShortLink = async () => {
     setIsLoading(true);
     try {
-      // Get auth token from session storage or localStorage
-      const session = JSON.parse(sessionStorage.getItem('sb-session') || '{}');
-      const token = session?.access_token;
-
-      if (!token) {
-        toast.error("Authentication required");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
+        toast.error("Please log in to create short links");
         setIsLoading(false);
         return;
       }
 
-      const response = await fetch(`${BACKEND_URL}/functions/v1/short-link-create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'apikey': BACKEND_ANON_KEY,
-        },
-        body: JSON.stringify({
-          originalUrl: originalUrl,
-        }),
-      });
+      // Try inserting unique short code up to a few times
+      let created: any = null;
+      const maxAttempts = 5;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const shortCode = Math.random().toString(36).substring(2, 8);
+        const { data, error } = await supabase
+          .from('short_links')
+          .insert({ short_code: shortCode, original_url: originalUrl, user_id: session.user.id })
+          .select()
+          .single();
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create short link');
+        if (!error && data) {
+          created = { ...data, short_code };
+          break;
+        }
+
+        // If unique constraint failed, try again
+        if (error && error.code !== '23505') {
+          throw error;
+        }
       }
 
-      const data = await response.json();
+      if (!created) throw new Error('Failed to create unique short link');
+
       const shortLinkData: ShortLink = {
-        short_code: data.short_code,
-        short_url: data.short_url,
-        click_count: data.click_count,
+        short_code: created.short_code,
+        short_url: `${new URL(BACKEND_URL).origin}/functions/v1/short-link-redirect/${created.short_code}`,
+        click_count: created.click_count || 0,
       };
 
       setShortLink(shortLinkData);
-      onShortLinkCreated?.(data);
+      onShortLinkCreated?.(created);
       toast.success("Short link created!");
     } catch (error) {
       console.error('Error creating short link:', error);
