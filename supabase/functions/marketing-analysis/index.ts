@@ -39,7 +39,10 @@ interface AnalysisResult {
 }
 async function callOpenAIAPI(analyticsData: AnalyticsData): Promise<AnalysisResult> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+  if (!apiKey) {
+    console.error('OPENAI_API_KEY environment variable is not set');
+    throw new Error('OpenAI API key is not configured. Please add OPENAI_API_KEY to Supabase function environment variables.');
+  }
 
   const prompt = `You are a marketing analytics expert. Analyze the following marketing data and provide actionable insights.
 

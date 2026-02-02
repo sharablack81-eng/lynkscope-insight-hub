@@ -110,7 +110,9 @@ export const AIAssistant = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Analysis failed');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Analysis failed with status ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       return await response.json();
@@ -179,10 +181,24 @@ export const AIAssistant = () => {
       });
     } catch (error) {
       console.error('Error in analysis process:', error);
+      
+      let errorDetails = 'Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('OPENAI_API_KEY') || error.message.includes('not configured')) {
+          errorDetails = 'The AI analysis service is not properly configured. Please contact support.';
+        } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+          errorDetails = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('No analytics data')) {
+          errorDetails = 'No marketing data available. Please create some links and track them first.';
+        } else {
+          errorDetails = error.message || errorDetails;
+        }
+      }
+
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error analyzing your data. Please try again.',
+        content: `Sorry, I encountered an error analyzing your data: ${errorDetails}`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);

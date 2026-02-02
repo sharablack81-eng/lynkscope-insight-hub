@@ -12,6 +12,11 @@ verify_jwt = false
 [functions.track-click]
 verify_jwt = false
 
+# Marketing Analysis Environment Variables
+[functions.marketing-analysis]
+verify_jwt = false
+OPENAI_API_KEY = "${OPENAI_API_KEY}"
+
 # Cliplyst Integration Environment Variables
 [functions.cliplyst-session]
 verify_jwt = false
