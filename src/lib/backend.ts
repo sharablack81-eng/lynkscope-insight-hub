@@ -33,9 +33,10 @@ export const supabase = createClient<Database>(
   BACKEND_PUBLISHABLE_KEY,
   {
     auth: {
-      storage: localStorage,
-      persistSession: true,
-      autoRefreshToken: true,
+      // Do not persist sessions between browser sessions — require manual sign-in
+      persistSession: false,
+      // Do not auto-refresh tokens silently
+      autoRefreshToken: false,
     },
   }
 );
