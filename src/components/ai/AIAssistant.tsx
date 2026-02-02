@@ -182,14 +182,18 @@ export const AIAssistant = () => {
     } catch (error) {
       console.error('Error in analysis process:', error);
       
-      let errorDetails = 'Please try again.';
+      let errorDetails = 'Please try again in a few moments.';
       if (error instanceof Error) {
-        if (error.message.includes('OPENAI_API_KEY') || error.message.includes('not configured')) {
+        if (error.message.includes('Too Many Requests') || error.message.includes('429')) {
+          errorDetails = 'Too many requests to OpenAI. Please wait a moment and try again.';
+        } else if (error.message.includes('OPENAI_API_KEY') || error.message.includes('not configured')) {
           errorDetails = 'The AI analysis service is not properly configured. Please contact support.';
         } else if (error.message.includes('Network') || error.message.includes('fetch')) {
           errorDetails = 'Network error. Please check your connection and try again.';
         } else if (error.message.includes('No analytics data')) {
           errorDetails = 'No marketing data available. Please create some links and track them first.';
+        } else if (error.message.includes('timeout')) {
+          errorDetails = 'Request timed out. Please try again.';
         } else {
           errorDetails = error.message || errorDetails;
         }

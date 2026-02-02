@@ -37,6 +37,10 @@ interface AnalysisResult {
   };
   nextSteps: string;
 }
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function callOpenAIAPI(analyticsData: AnalyticsData): Promise<AnalysisResult> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
@@ -44,84 +48,80 @@ async function callOpenAIAPI(analyticsData: AnalyticsData): Promise<AnalysisResu
     throw new Error('OpenAI API key is not configured. Please add OPENAI_API_KEY to Supabase function environment variables.');
   }
 
-  const prompt = `You are a marketing analytics expert. Analyze the following marketing data and provide actionable insights.
+  const prompt = `Analyze this marketing data and respond with ONLY valid JSON, no other text.
 
-Business: ${analyticsData.businessName}
-Niche: ${analyticsData.businessNiche}
+Business: ${analyticsData.businessName} (${analyticsData.businessNiche})
+Links: ${analyticsData.totalLinks} | Clicks: ${analyticsData.totalClicks} | CTR: ${(analyticsData.averageCtr * 100).toFixed(1)}%
 
-Marketing Performance Data:
-- Total Links: ${analyticsData.totalLinks}
-- Total Clicks: ${analyticsData.totalClicks}
-- Average CTR: ${(analyticsData.averageCtr * 100).toFixed(2)}%
-- Time Range: ${analyticsData.timeRange}
+Platforms: ${Object.entries(analyticsData.platformBreakdown)
+  .map(([p, d]) => `${p}(${d.clicks}c)`)
+  .join(', ')}
 
-Platform Breakdown:
-${Object.entries(analyticsData.platformBreakdown)
-  .map(([platform, data]) => `- ${platform}: ${data.clicks} clicks from ${data.links} links (CTR: ${(data.ctr * 100).toFixed(2)}%)`)
-  .join('\n')}
+Top: ${analyticsData.topPerformers.slice(0, 2).map(p => p.title).join(', ') || 'None'}
+Low: ${analyticsData.underperformers.slice(0, 2).map(p => p.title).join(', ') || 'None'}
 
-Top Performers:
-${analyticsData.topPerformers.map(p => `- "${p.title}" on ${p.platform}: ${p.clicks} clicks`).join('\n') || 'No data yet'}
-
-Underperformers:
-${analyticsData.underperformers.map(p => `- "${p.title}" on ${p.platform}: ${p.clicks} clicks`).join('\n') || 'No data yet'}
-
-Please provide:
-1. A brief executive summary (2-3 sentences)
-2. A ranking of platforms from worst to best performer with scores
-3. Key insights about what's working and what isn't
-4. Specific, actionable suggestions for improvement
-
-Format your response as valid JSON with these exact fields:
+Output JSON:
 {
-  "summary": "...",
-  "platformRanking": [
-    {
-      "platform": "...",
-      "score": <0-100>,
-      "clicks": <number>,
-      "performance": "excellent|good|fair|poor",
-      "recommendation": "..."
-    }
-  ],
-  "keyInsights": {
-    "topPerformingContent": "...",
-    "underperformingAreas": "...",
-    "suggestions": ["...", "..."]
-  },
-  "nextSteps": "..."
+  "summary": "2-3 sentence executive summary",
+  "platformRanking": [{"platform": "name", "score": 0-100, "clicks": number, "performance": "excellent|good|fair|poor", "recommendation": "brief advice"}],
+  "keyInsights": {"topPerformingContent": "what works", "underperformingAreas": "what doesn't", "suggestions": ["tip1", "tip2"]},
+  "nextSteps": "action items"
 }`;
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant that outputs structured JSON.' },
-        { role: 'user', content: prompt },
-      ],
-      max_tokens: 1200,
-      temperature: 0.2,
-    }),
-  });
+  let lastError: Error | null = null;
+  const maxRetries = 3;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Output only valid JSON.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 800,
+          temperature: 0.1,
+        }),
+      });
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('OpenAI API error:', err);
-    throw new Error(`OpenAI API failed: ${res.statusText}`);
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get('retry-after') || '60', 10);
+        const waitTime = Math.min(retryAfter * 1000, (attempt + 1) * 2000);
+        console.warn(`Rate limited. Retry attempt ${attempt + 1}/${maxRetries}. Waiting ${waitTime}ms...`);
+        await sleep(waitTime);
+        continue;
+      }
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('OpenAI API error:', err);
+        throw new Error(`OpenAI API failed: ${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content || '';
+
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Failed to parse response as JSON');
+
+      return JSON.parse(jsonMatch[0]);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxRetries - 1) {
+        const backoffMs = (attempt + 1) * 1000;
+        console.warn(`Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${backoffMs}ms...`);
+        await sleep(backoffMs);
+      }
+    }
   }
 
-  const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || '';
-
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Failed to parse OpenAI response as JSON');
-
-  return JSON.parse(jsonMatch[0]);
+  throw lastError || new Error('Failed to get analysis after multiple attempts');
 }
 
 serve(async (req: Request) => {
