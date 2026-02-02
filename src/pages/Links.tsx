@@ -123,6 +123,11 @@ const Links = () => {
       } else {
         // Add new link - just insert directly with user_id
         // The RLS policy will check auth.uid() matches user_id
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !session.user) {
+          throw new Error('You must be logged in to create a link');
+        }
+
         const shortCode = Math.random().toString(36).substring(2, 8);
 
         const { error } = await supabase
@@ -132,6 +137,7 @@ const Links = () => {
             url: linkData.url,
             platform: linkData.platform,
             short_code: shortCode,
+            user_id: session.user.id,
           });
 
         if (error) throw error;
