@@ -7,24 +7,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Environment variables loaded from supabase/config.toml
+// Environment variables loaded at runtime
 const CLIPLYST_API_URL = Deno.env.get('CLIPLYST_API_URL') || 'https://cliplyst-content-maker-4qd6.onrender.com';
-const JWT_SECRET = Deno.env.get('JWT_SECRET');
-const LYNKSCOPE_INTERNAL_KEY = Deno.env.get('LYNKSCOPE_INTERNAL_KEY');
-
-// Validate required environment variables
-if (!JWT_SECRET) {
-  console.error('ERROR: JWT_SECRET environment variable is not configured');
-  throw new Error('JWT_SECRET must be set in Supabase Edge Functions environment');
-}
-
-if (!LYNKSCOPE_INTERNAL_KEY) {
-  console.error('ERROR: LYNKSCOPE_INTERNAL_KEY environment variable is not configured');
-  throw new Error('LYNKSCOPE_INTERNAL_KEY must be set in Supabase Edge Functions environment');
-}
 
 // Simple JWT creation (production should use a proper JWT library)
-async function createJWT(payload: Record<string, string | number>) {
+async function createJWT(payload: Record<string, string | number>, jwtSecret: string) {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const tokenPayload = {
@@ -41,7 +28,7 @@ async function createJWT(payload: Record<string, string | number>) {
     'HMAC',
     await crypto.subtle.importKey(
       'raw',
-      encoder.encode(JWT_SECRET),
+      encoder.encode(jwtSecret),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign']
@@ -59,6 +46,25 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Validate required environment variables inside request handler
+    const JWT_SECRET = Deno.env.get('JWT_SECRET');
+    if (!JWT_SECRET) {
+      console.error('ERROR: JWT_SECRET environment variable is not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server configuration error: JWT_SECRET not set' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const LYNKSCOPE_INTERNAL_KEY = Deno.env.get('LYNKSCOPE_INTERNAL_KEY');
+    if (!LYNKSCOPE_INTERNAL_KEY) {
+      console.error('ERROR: LYNKSCOPE_INTERNAL_KEY environment variable is not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server configuration error: LYNKSCOPE_INTERNAL_KEY not set' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
@@ -90,12 +96,12 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get user's business profile
+    // Get user's business profile - use maybeSingle to handle missing profiles
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('business_name, niche')
+      .select('business_name, business_niche')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Profile error:', profileError);
@@ -111,8 +117,8 @@ serve(async (req: Request) => {
       email: user.email || '',
       user_id: user.id,
       company_name: profile?.business_name || 'Unnamed Business',
-      niche: profile?.niche || 'General',
-    });
+      niche: profile?.business_niche || 'General',
+    }, JWT_SECRET);
 
     console.log('[Cliplyst Session] Created JWT for user:', user.id);
 
