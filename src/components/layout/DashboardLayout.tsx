@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, ReactNode, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { status, daysRemaining, isLoading: subscriptionLoading } = useSubscription();
+  const [expiredDismissed, setExpiredDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem('trial_expired_dismissed_v1');
+      setExpiredDismissed(v === '1');
+    } catch (e) {
+      setExpiredDismissed(false);
+    }
+  }, []);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -74,6 +84,30 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="space-y-2">
             {mainMenuItems.map((item, index) => {
               const isActive = location.pathname === item.path;
+              // If trial expired and user dismissed the initial popup, block navigation to everything except settings
+              if (!subscriptionLoading && status === 'expired' && expiredDismissed) {
+                return (
+                  <div key={index}>
+                    <button
+                      onClick={() => {
+                        if (item.path === '/settings') navigate('/settings');
+                        else toast?.error?.('Upgrade required to access this page');
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all group ${
+                        isActive ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground"
+                      }`}
+                    >
+                      <item.icon
+                        className={`w-5 h-5 flex-shrink-0 ${
+                          isActive ? "text-sidebar-primary" : "text-muted-foreground group-hover:text-sidebar-foreground"
+                        }`}
+                      />
+                      {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                    </button>
+                  </div>
+                );
+              }
+
               return (
                 <Link key={index} to={item.path}>
                   <button
@@ -97,6 +131,27 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="space-y-2">
             {premiumMenuItems.map((item, index) => {
               const isActive = location.pathname === item.path;
+              // Block premium pages when expired/dismissed
+              if (!subscriptionLoading && status === 'expired' && expiredDismissed) {
+                return (
+                  <div key={index}>
+                    <button
+                      onClick={() => toast?.error?.('Upgrade required to access this page')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all group ${
+                        isActive ? "bg-sidebar-accent text-sidebar-primary" : "text-sidebar-foreground"
+                      }`}
+                    >
+                      <item.icon
+                        className={`w-5 h-5 flex-shrink-0 ${
+                          isActive ? "text-sidebar-primary" : "text-muted-foreground group-hover:text-sidebar-foreground"
+                        }`}
+                      />
+                      {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                    </button>
+                  </div>
+                );
+              }
+
               return (
                 <Link key={index} to={item.path}>
                   <button
