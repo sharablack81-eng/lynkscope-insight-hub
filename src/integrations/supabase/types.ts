@@ -264,6 +264,36 @@ export type Database = {
         }
         Relationships: []
       }
+      short_links: {
+        Row: {
+          click_count: number
+          created_at: string
+          id: string
+          last_clicked_at: string | null
+          original_url: string
+          short_code: string
+          user_id: string
+        }
+        Insert: {
+          click_count?: number
+          created_at?: string
+          id?: string
+          last_clicked_at?: string | null
+          original_url: string
+          short_code: string
+          user_id: string
+        }
+        Update: {
+          click_count?: number
+          created_at?: string
+          id?: string
+          last_clicked_at?: string | null
+          original_url?: string
+          short_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       smart_link_clicks: {
         Row: {
           browser: string | null
