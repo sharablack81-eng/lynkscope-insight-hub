@@ -77,17 +77,13 @@ serve(async (req: Request) => {
     const userLinkIds = (links || []).map(link => link.id);
 
     // Get clicks only for user's links from smart_link_clicks (single source of truth)
-    // Filter to last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
+    // NOTE: Dashboard uses all-time aggregation; keep this endpoint consistent with dashboard
     let allClicks: any[] = [];
     if (userLinkIds.length > 0) {
       const { data: clicksData, error: clicksError } = await supabase
         .from('smart_link_clicks')
         .select('id, link_id, clicked_at, destination_url, browser, device_type, country, continent')
-        .in('link_id', userLinkIds)
-        .gte('clicked_at', thirtyDaysAgo.toISOString());
+        .in('link_id', userLinkIds);
 
       if (clicksError) throw clicksError;
       allClicks = clicksData || [];
@@ -109,11 +105,25 @@ serve(async (req: Request) => {
       }
     }
 
-    // Build platform breakdown and link performance
+    // Normalize platform names to match dashboard logic and build platform breakdown and link performance
+    function normalizePlatformName(platform) {
+      if (!platform) return 'Other';
+      const normalized = String(platform).toLowerCase().trim();
+      const map = {
+        'tiktok': 'TikTok',
+        'instagram': 'Instagram',
+        'youtube': 'YouTube',
+        'twitter': 'Twitter',
+        'x': 'Twitter',
+        'other': 'Other'
+      };
+      return map[normalized] || platform;
+    }
+
     const platformBreakdown: Record<string, { clicks: number; links: number; ctr: number }> = {};
     const linkPerformance = (links || []).map(link => {
       const linkClicks = linkClicksMap[link.id] || [];
-      const platform = link.platform || 'Other';
+      const platform = normalizePlatformName(link.platform || 'Other');
       
       if (!platformBreakdown[platform]) {
         platformBreakdown[platform] = { clicks: 0, links: 0, ctr: 0 };
