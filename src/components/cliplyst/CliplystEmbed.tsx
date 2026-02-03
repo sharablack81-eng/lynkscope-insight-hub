@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { AlertCircle, Loader } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,18 +12,32 @@ export const CliplystEmbed = ({ embedUrl, onClose }: CliplystEmbedProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [iframeReady, setIframeReady] = useState(false);
+  const iframeReadyRef = useRef(false);
 
   useEffect(() => {
     // Reset states when embedUrl changes
     setIsLoading(true);
     setError(null);
     setIframeReady(false);
+    iframeReadyRef.current = false;
+    
+    // Timeout: if iframe doesn't load within 15 seconds, show error
+    const timeout = setTimeout(() => {
+      if (!iframeReadyRef.current) {
+        console.warn('[Cliplyst Embed] iframe load timeout');
+        setIsLoading(false);
+        setError('Cliplyst is taking too long to load. The service may be unavailable.');
+      }
+    }, 15000);
+    
+    return () => clearTimeout(timeout);
   }, [embedUrl]);
 
   const handleIframeLoad = () => {
     console.log('[Cliplyst Embed] iframe loaded successfully');
     setIsLoading(false);
     setIframeReady(true);
+    iframeReadyRef.current = true;
   };
 
   const handleIframeError = () => {

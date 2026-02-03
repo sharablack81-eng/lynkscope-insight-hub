@@ -122,37 +122,45 @@ serve(async (req: Request) => {
 
     console.log('[Cliplyst Session] Created JWT for user:', user.id);
 
-    // Request embed URL from Cliplyst
-    const cliplystResponse = await fetch(`${CLIPLYST_API_URL}/api/auth/embed`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        token: jwtToken,
-      }),
-    });
+    // Try to request embed URL from Cliplyst, with timeout
+    let embedUrl = CLIPLYST_API_URL;
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const cliplystResponse = await fetch(`${CLIPLYST_API_URL}/api/auth/embed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: jwtToken,
+        }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
 
-    if (!cliplystResponse.ok) {
-      let cliplystError;
-      try {
-        cliplystError = await cliplystResponse.json();
-      } catch {
-        cliplystError = { error: `HTTP ${cliplystResponse.status}` };
+      if (cliplystResponse.ok) {
+        const cliplystData = await cliplystResponse.json();
+        if (cliplystData.embed_url) {
+          embedUrl = cliplystData.embed_url;
+          console.log('[Cliplyst Session] Received embed URL from Cliplyst');
+        }
+      } else {
+        console.warn('[Cliplyst Session] Cliplyst API returned non-ok status:', cliplystResponse.status);
       }
-
-      console.error('[Cliplyst Session] Cliplyst error:', cliplystError);
-      throw new Error(cliplystError.error || `Cliplyst API error: ${cliplystResponse.status}`);
+    } catch (fetchError) {
+      // If Cliplyst API is unavailable, use fallback URL with token
+      console.warn('[Cliplyst Session] Cliplyst API unavailable, using fallback:', fetchError);
+      embedUrl = `${CLIPLYST_API_URL}?token=${encodeURIComponent(jwtToken)}`;
     }
-
-    const cliplystData = await cliplystResponse.json();
-
-    console.log('[Cliplyst Session] Received embed URL from Cliplyst');
 
     return new Response(
       JSON.stringify({
         success: true,
-        embed_url: cliplystData.embed_url || CLIPLYST_API_URL,
+        embed_url: embedUrl,
         token: jwtToken,
         message: 'Cliplyst session created successfully',
       }),
