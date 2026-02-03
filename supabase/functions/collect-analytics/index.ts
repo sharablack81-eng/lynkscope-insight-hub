@@ -54,14 +54,16 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch business profile
+    // Fetch business profile - use maybeSingle to handle missing profiles gracefully
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('business_name, business_niche')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.warn('Profile fetch error (may not exist yet):', profileError.message);
+    }
 
     // Fetch user's links
     const { data: links, error: linksError } = await supabase
@@ -71,23 +73,31 @@ serve(async (req: Request) => {
 
     if (linksError) throw linksError;
 
-    // Get all clicks from smart_link_clicks (single source of truth)
+    // Get user's link IDs for filtering clicks
+    const userLinkIds = (links || []).map(link => link.id);
+
+    // Get clicks only for user's links from smart_link_clicks (single source of truth)
     // Filter to last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: allClicks, error: clicksError } = await supabase
-      .from('smart_link_clicks')
-      .select('id, link_id, clicked_at, destination_url, browser, device_type, country, continent')
-      .gte('clicked_at', thirtyDaysAgo.toISOString());
+    let allClicks: any[] = [];
+    if (userLinkIds.length > 0) {
+      const { data: clicksData, error: clicksError } = await supabase
+        .from('smart_link_clicks')
+        .select('id, link_id, clicked_at, destination_url, browser, device_type, country, continent')
+        .in('link_id', userLinkIds)
+        .gte('clicked_at', thirtyDaysAgo.toISOString());
 
-    if (clicksError) throw clicksError;
+      if (clicksError) throw clicksError;
+      allClicks = clicksData || [];
+    }
 
     // Aggregate analytics by link_id
     const linkClicksMap: Record<string, any[]> = {};
     let totalClicks = 0;
 
-    if (allClicks && allClicks.length > 0) {
+    if (allClicks.length > 0) {
       totalClicks = allClicks.length;
       for (const click of allClicks) {
         if (click.link_id) {
