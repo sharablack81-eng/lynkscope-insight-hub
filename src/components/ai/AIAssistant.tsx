@@ -43,6 +43,26 @@ interface AnalysisResult {
   nextSteps: string;
 }
 
+interface CliplystSyncPayload {
+  user_id: string;
+  business_name: string;
+  niche: string;
+  total_clicks: number;
+  top_platform: string;
+  underperforming_platforms: string[];
+  platform_click_breakdown: {
+    youtube: number;
+    tiktok: number;
+    instagram: number;
+    twitter: number;
+    other: number;
+  };
+  weak_platforms: string[];
+  top_opportunities: string[];
+  auto_schedule: boolean;
+  posting_frequency: string;
+}
+
 export const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -123,6 +143,81 @@ export const AIAssistant = () => {
     }
   };
 
+  // Sync marketing intelligence to Cliplyst
+  const syncToCliplyst = async (
+    analyticsData: AnalyticsData,
+    analysis: AnalysisResult,
+    userId: string
+  ): Promise<void> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('[Cliplyst Sync] No session, skipping sync');
+        return;
+      }
+
+      // Build platform click breakdown
+      const platformBreakdown = analyticsData.platformBreakdown;
+      const clickBreakdown = {
+        youtube: platformBreakdown['YouTube']?.clicks || 0,
+        tiktok: platformBreakdown['TikTok']?.clicks || 0,
+        instagram: platformBreakdown['Instagram']?.clicks || 0,
+        twitter: platformBreakdown['Twitter']?.clicks || 0,
+        other: platformBreakdown['Other']?.clicks || 0,
+      };
+
+      // Find top platform and underperformers
+      const sortedPlatforms = analysis.platformRanking.sort((a, b) => b.clicks - a.clicks);
+      const topPlatform = sortedPlatforms[0]?.platform || 'Unknown';
+      const underperformingPlatforms = sortedPlatforms
+        .filter(p => p.performance === 'poor' || p.performance === 'fair')
+        .map(p => p.platform);
+
+      // Build opportunities from suggestions
+      const topOpportunities = analysis.keyInsights.suggestions.slice(0, 3);
+
+      const payload: CliplystSyncPayload = {
+        user_id: userId,
+        business_name: analyticsData.businessName,
+        niche: analyticsData.businessNiche,
+        total_clicks: analyticsData.totalClicks,
+        top_platform: topPlatform,
+        underperforming_platforms: underperformingPlatforms,
+        platform_click_breakdown: clickBreakdown,
+        weak_platforms: underperformingPlatforms,
+        top_opportunities: topOpportunities,
+        auto_schedule: false,
+        posting_frequency: 'daily',
+      };
+
+      console.log('[Cliplyst Sync] Sending marketing intelligence:', payload);
+
+      const response = await fetch(`${BACKEND_URL}/functions/v1/cliplyst-sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        console.warn('[Cliplyst Sync] Sync failed:', response.status);
+        return;
+      }
+
+      const result = await response.json();
+      console.log('[Cliplyst Sync] Result:', result);
+
+      if (result.synced) {
+        console.log('[Cliplyst Sync] Successfully synced to Cliplyst');
+      }
+    } catch (error) {
+      // Silently fail - don't interrupt the user experience
+      console.error('[Cliplyst Sync] Error:', error);
+    }
+  };
+
   const handleSummarize = async () => {
     // Add user message
     const userMessage: Message = {
@@ -156,9 +251,12 @@ export const AIAssistant = () => {
       const analysis = await analyzeMarketing(analyticsData);
       setAnalysisResult(analysis);
 
-      // Store user data for Cliplyst integration
+      // Get user ID for Cliplyst sync
+      const userId = (await supabase.auth.getUser()).data.user?.id || 'unknown';
+
+      // Store user data for Cliplyst integration (legacy localStorage backup)
       const userDataForCliplyst = {
-        user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown',
+        user_id: userId,
         business_name: analyticsData.businessName,
         niche: analyticsData.businessNiche,
         total_links: analyticsData.totalLinks,
@@ -167,11 +265,15 @@ export const AIAssistant = () => {
       };
       localStorage.setItem('lynkscope_user_analysis', JSON.stringify(userDataForCliplyst));
 
+      // 🚀 Automatically sync marketing intelligence to Cliplyst
+      // This runs in the background and won't block the UI
+      syncToCliplyst(analyticsData, analysis, userId);
+
       // Replace loading message with analysis summary
       const summaryMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: `I've analyzed your marketing data for "${analyticsData.businessName}". Here's what I found:\n\n${analysis.summary}`,
+        content: `I've analyzed your marketing data for "${analyticsData.businessName}". Here's what I found:\n\n${analysis.summary}\n\n✨ Marketing intelligence has been synced to Cliplyst for content optimization.`,
         timestamp: new Date(),
       };
 
