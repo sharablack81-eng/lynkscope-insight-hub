@@ -137,8 +137,8 @@ export const AnalysisDisplay = ({ analysis }: { analysis: AnalysisResult }) => {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-semibold text-xs truncate">{platform.platform}</span>
-                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded whitespace-nowrap text-black bg-white">
+                    <span className="font-semibold text-xs truncate text-gray-900">{platform.platform}</span>
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded whitespace-nowrap text-gray-900 bg-white/80 border border-gray-300">
                       {getScoreLabel(platform.score)}
                     </span>
                   </div>
