@@ -12,6 +12,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  showSeoPrompt?: boolean;
 }
 
 interface AnalyticsData {
@@ -24,6 +25,8 @@ interface AnalyticsData {
   topPerformers: Array<{ title: string; url: string; clicks: number; platform: string }>;
   underperformers: Array<{ title: string; url: string; clicks: number; platform: string }>;
   averageCtr: number;
+  topPlatform: string;
+  topPlatformPercentage: number;
 }
 
 interface AnalysisResult {
@@ -76,6 +79,8 @@ export const AIAssistant = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [lastAnalyticsData, setLastAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [awaitingSeoResponse, setAwaitingSeoResponse] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -148,15 +153,15 @@ export const AIAssistant = () => {
     analyticsData: AnalyticsData,
     analysis: AnalysisResult,
     userId: string
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.warn('[Cliplyst Sync] No session, skipping sync');
-        return;
+        return false;
       }
 
-      // Build platform click breakdown
+      // Build platform click breakdown from analytics data
       const platformBreakdown = analyticsData.platformBreakdown;
       const clickBreakdown = {
         youtube: platformBreakdown['YouTube']?.clicks || 0,
@@ -166,9 +171,9 @@ export const AIAssistant = () => {
         other: platformBreakdown['Other']?.clicks || 0,
       };
 
-      // Find top platform and underperformers
-      const sortedPlatforms = analysis.platformRanking.sort((a, b) => b.clicks - a.clicks);
-      const topPlatform = sortedPlatforms[0]?.platform || 'Unknown';
+      // Find top platform and underperformers from analysis
+      const sortedPlatforms = [...analysis.platformRanking].sort((a, b) => b.clicks - a.clicks);
+      const topPlatform = analyticsData.topPlatform || sortedPlatforms[0]?.platform || 'Unknown';
       const underperformingPlatforms = sortedPlatforms
         .filter(p => p.performance === 'poor' || p.performance === 'fair')
         .map(p => p.platform);
@@ -203,19 +208,100 @@ export const AIAssistant = () => {
 
       if (!response.ok) {
         console.warn('[Cliplyst Sync] Sync failed:', response.status);
-        return;
+        return false;
       }
 
       const result = await response.json();
       console.log('[Cliplyst Sync] Result:', result);
 
-      if (result.synced) {
-        console.log('[Cliplyst Sync] Successfully synced to Cliplyst');
-      }
+      return result.synced === true;
     } catch (error) {
       // Silently fail - don't interrupt the user experience
       console.error('[Cliplyst Sync] Error:', error);
+      return false;
     }
+  };
+
+  // Generate SEO captions and hashtags
+  const generateSeoCaptions = async (analyticsData: AnalyticsData, analysis: AnalysisResult): Promise<string> => {
+    const niche = analyticsData.businessNiche || 'General';
+    const topPlatform = analyticsData.topPlatform || 'Social Media';
+    const underperformers = analysis.platformRanking
+      .filter(p => p.performance === 'poor' || p.performance === 'fair')
+      .map(p => p.platform);
+    
+    // Generate platform-specific captions
+    const captions: string[] = [];
+    const hashtags: string[] = [];
+    
+    // Niche-based hashtags
+    const nicheHashtags: Record<string, string[]> = {
+      'Fashion': ['#OOTD', '#FashionInspo', '#StyleGuide', '#Trending'],
+      'Tech': ['#TechTips', '#Innovation', '#FutureTech', '#Gadgets'],
+      'Fitness': ['#FitnessMotivation', '#WorkoutTips', '#HealthyLifestyle', '#GymLife'],
+      'Food': ['#Foodie', '#RecipeOfTheDay', '#Delicious', '#Cooking'],
+      'Business': ['#Entrepreneur', '#BusinessTips', '#Success', '#Growth'],
+      'General': ['#Viral', '#Trending', '#MustSee', '#CheckThisOut'],
+    };
+    
+    const selectedHashtags = nicheHashtags[niche] || nicheHashtags['General'];
+    hashtags.push(...selectedHashtags);
+    
+    // Platform-specific captions
+    if (topPlatform === 'TikTok' || underperformers.includes('TikTok')) {
+      captions.push(`🔥 POV: You just discovered something amazing in ${niche.toLowerCase()}...`);
+      captions.push(`Wait for it... 👀 This ${niche.toLowerCase()} hack changed everything!`);
+      hashtags.push('#TikTokMadeMeBuyIt', '#ForYouPage', '#FYP');
+    }
+    
+    if (topPlatform === 'Instagram' || underperformers.includes('Instagram')) {
+      captions.push(`✨ The ${niche.toLowerCase()} content you've been waiting for is here.`);
+      captions.push(`Double tap if you agree! 💯 Comment your thoughts below 👇`);
+      hashtags.push('#InstaDaily', '#ExplorePage', '#ReelsViral');
+    }
+    
+    if (topPlatform === 'YouTube' || underperformers.includes('YouTube')) {
+      captions.push(`📺 NEW VIDEO: Everything you need to know about ${niche.toLowerCase()} [WATCH NOW]`);
+      captions.push(`Subscribe for more ${niche.toLowerCase()} content! 🔔`);
+      hashtags.push('#YouTubeShorts', '#Subscribe', '#NewVideo');
+    }
+    
+    if (topPlatform === 'Twitter' || underperformers.includes('Twitter')) {
+      captions.push(`🧵 A thread on ${niche.toLowerCase()} trends you can't miss:`);
+      captions.push(`Hot take: ${niche} is evolving faster than ever. Here's why 👇`);
+      hashtags.push('#Threads', '#Trending');
+    }
+    
+    // Default captions if none matched
+    if (captions.length === 0) {
+      captions.push(`🚀 Level up your ${niche.toLowerCase()} game with this!`);
+      captions.push(`The secret to success in ${niche.toLowerCase()}? Consistency + value.`);
+      captions.push(`Tag someone who needs to see this! 👥`);
+    }
+    
+    // Build response
+    let response = `🎯 **Niche-Optimized Captions for ${niche}**\n\n`;
+    response += `**Top Platform Focus:** ${topPlatform}\n`;
+    if (underperformers.length > 0) {
+      response += `**Boost Needed:** ${underperformers.join(', ')}\n\n`;
+    } else {
+      response += '\n';
+    }
+    
+    response += `**📝 Caption Ideas:**\n`;
+    captions.forEach((caption, i) => {
+      response += `${i + 1}. ${caption}\n`;
+    });
+    
+    response += `\n**#️⃣ SEO Hashtags:**\n`;
+    response += hashtags.join(' ') + '\n';
+    
+    response += `\n**💡 Pro Tips:**\n`;
+    response += `• Post during peak hours (typically 12-3 PM and 7-9 PM)\n`;
+    response += `• Engage with comments within the first hour\n`;
+    response += `• Use trending audio on TikTok/Reels for extra reach`;
+    
+    return response;
   };
 
   const handleSummarize = async () => {
@@ -238,9 +324,13 @@ export const AIAssistant = () => {
         throw new Error("No analytics data available");
       }
 
+      // Store for SEO generation later
+      setLastAnalyticsData(analyticsData);
+
       // Add loading message
+      const loadingId = 'loading-' + Date.now();
       const loadingMessage: Message = {
-        id: 'loading-' + Date.now(),
+        id: loadingId,
         role: 'assistant',
         content: 'Analyzing your marketing performance... This may take a moment.',
         timestamp: new Date(),
@@ -266,22 +356,40 @@ export const AIAssistant = () => {
       localStorage.setItem('lynkscope_user_analysis', JSON.stringify(userDataForCliplyst));
 
       // 🚀 Automatically sync marketing intelligence to Cliplyst
-      // This runs in the background and won't block the UI
-      syncToCliplyst(analyticsData, analysis, userId);
+      const syncSuccess = await syncToCliplyst(analyticsData, analysis, userId);
+
+      // Build the summary with analytics matching dashboard
+      const syncMessage = syncSuccess 
+        ? "\n\n✨ Analysis data sent to Cliplyst for content optimization."
+        : "";
 
       // Replace loading message with analysis summary
       const summaryMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: `I've analyzed your marketing data for "${analyticsData.businessName}". Here's what I found:\n\n${analysis.summary}\n\n✨ Marketing intelligence has been synced to Cliplyst for content optimization.`,
+        content: `I've analyzed your marketing data for "${analyticsData.businessName}".\n\n📊 **Quick Stats:**\n• Total Clicks: ${analyticsData.totalClicks.toLocaleString()}\n• Total Links: ${analyticsData.totalLinks}\n• Top Platform: ${analyticsData.topPlatform} (${analyticsData.topPlatformPercentage}% of traffic)\n\n${analysis.summary}${syncMessage}`,
         timestamp: new Date(),
       };
 
       setMessages(prev => {
         // Remove loading message
-        const filtered = prev.filter(m => m.id !== 'loading-' + Date.now());
+        const filtered = prev.filter(m => m.id !== loadingId);
         return [...filtered, summaryMessage];
       });
+
+      // Add follow-up SEO prompt after a brief delay
+      setTimeout(() => {
+        const seoPromptMessage: Message = {
+          id: (Date.now() + 100).toString(),
+          role: 'assistant',
+          content: '💡 Would you like me to generate niche-optimized captions and hashtags for SEO?\n\nType **"Yes"** and I\'ll create platform-specific content based on your performance data.',
+          timestamp: new Date(),
+          showSeoPrompt: true,
+        };
+        setMessages(prev => [...prev, seoPromptMessage]);
+        setAwaitingSeoResponse(true);
+      }, 1000);
+
     } catch (error) {
       console.error('Error in analysis process:', error);
       
@@ -315,34 +423,91 @@ export const AIAssistant = () => {
     }
   };
 
-  const handleSendToCliplyst = () => {
-    if (!analysisResult) {
-      toast.error("No analysis data available");
+  const handleSeoGeneration = async () => {
+    if (!lastAnalyticsData || !analysisResult) {
+      toast.error("Please run the analysis first");
       return;
     }
 
-    // This is a placeholder for future Cliplyst integration
-    const cliplystData = JSON.stringify(analysisResult, null, 2);
-    console.log("Cliplyst payload:", cliplystData);
+    setIsLoading(true);
 
-    const message: Message = {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: '✨ Analysis data ready to send to Cliplyst! This feature will be available soon to automatically generate optimized content for your underperforming platforms.',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, message]);
-    toast.success("Analysis data prepared for Cliplyst");
+    try {
+      const seoContent = await generateSeoCaptions(lastAnalyticsData, analysisResult);
+      
+      const seoMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: seoContent,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, seoMessage]);
+      setAwaitingSeoResponse(false);
+    } catch (error) {
+      console.error('Error generating SEO content:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error generating captions. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
+    const userInput = input.toLowerCase().trim();
+
+    // Check if awaiting SEO response
+    if (awaitingSeoResponse && (userInput === 'yes' || userInput === 'y' || userInput.includes('yes'))) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: input,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+      setInput("");
+      await handleSeoGeneration();
+      return;
+    }
+
     // Check for summarize command
-    if (input.toLowerCase().includes("summarize")) {
+    if (userInput.includes("summarize")) {
       await handleSummarize();
+    } else if (userInput.includes("caption") || userInput.includes("hashtag") || userInput.includes("seo")) {
+      // Direct request for captions
+      if (lastAnalyticsData && analysisResult) {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, userMessage]);
+        setInput("");
+        await handleSeoGeneration();
+      } else {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, userMessage]);
+        setInput("");
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'To generate captions and hashtags, I first need to analyze your data. Please type "Summarize my marketing data" to get started!',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }
     } else {
       // Generic response for other inputs
       const userMessage: Message = {
@@ -371,7 +536,7 @@ export const AIAssistant = () => {
       {/* Floating AI Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 text-primary-foreground rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
         aria-label="Open AI Assistant"
       >
         {isOpen ? <X size={24} /> : <Sparkles size={24} />}
@@ -379,9 +544,9 @@ export const AIAssistant = () => {
 
       {/* Chat Panel */}
       {isOpen && (
-        <Card className="fixed bottom-24 right-6 w-96 h-[500px] bg-white shadow-2xl rounded-lg flex flex-col z-40">
+        <Card className="fixed bottom-24 right-6 w-96 h-[500px] bg-card shadow-2xl rounded-lg flex flex-col z-40 border border-border">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+          <div className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground p-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles size={20} />
               <h3 className="font-semibold">Marketing AI Assistant</h3>
@@ -395,8 +560,8 @@ export const AIAssistant = () => {
                 <div
                   className={`max-w-xs px-4 py-2 rounded-lg ${
                     msg.role === 'user'
-                      ? 'bg-purple-100 text-purple-900'
-                      : 'bg-gray-100 text-gray-900'
+                      ? 'bg-primary/20 text-foreground'
+                      : 'bg-muted text-foreground'
                   } whitespace-pre-wrap text-sm`}
                 >
                   {msg.content}
@@ -406,15 +571,15 @@ export const AIAssistant = () => {
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 px-4 py-2 rounded-lg flex items-center gap-2">
-                  <Loader size={16} className="animate-spin" />
-                  <span className="text-sm text-gray-600">Analyzing...</span>
+                <div className="bg-muted px-4 py-2 rounded-lg flex items-center gap-2">
+                  <Loader size={16} className="animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Analyzing...</span>
                 </div>
               </div>
             )}
 
             {analysisResult && (
-              <div className="mt-4 pt-4 border-t border-gray-200 w-full">
+              <div className="mt-4 pt-4 border-t border-border w-full">
                 <AnalysisDisplay analysis={analysisResult} />
               </div>
             )}
@@ -423,12 +588,12 @@ export const AIAssistant = () => {
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
+          <form onSubmit={handleSubmit} className="p-4 border-t border-border">
             <div className="flex gap-2">
               <Input
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder="Type 'Summarize my marketing data'..."
+                placeholder={awaitingSeoResponse ? "Type 'Yes' for captions..." : "Type 'Summarize my marketing data'..."}
                 className="flex-1"
                 disabled={isLoading}
               />
@@ -436,7 +601,7 @@ export const AIAssistant = () => {
                 type="submit"
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="bg-purple-500 hover:bg-purple-600"
+                className="bg-primary hover:bg-primary/90"
               >
                 <Send size={18} />
               </Button>
