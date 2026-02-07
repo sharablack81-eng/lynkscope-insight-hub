@@ -65,6 +65,303 @@ export type Database = {
           },
         ]
       }
+      cliplyst_captions: {
+        Row: {
+          caption_text: string
+          clip_id: string | null
+          created_at: string
+          hashtags: string[] | null
+          id: string
+          is_selected: boolean | null
+          platform: string
+          seo_score: number | null
+          tone: string | null
+          trend_id: string | null
+          user_id: string
+        }
+        Insert: {
+          caption_text: string
+          clip_id?: string | null
+          created_at?: string
+          hashtags?: string[] | null
+          id?: string
+          is_selected?: boolean | null
+          platform: string
+          seo_score?: number | null
+          tone?: string | null
+          trend_id?: string | null
+          user_id: string
+        }
+        Update: {
+          caption_text?: string
+          clip_id?: string | null
+          created_at?: string
+          hashtags?: string[] | null
+          id?: string
+          is_selected?: boolean | null
+          platform?: string
+          seo_score?: number | null
+          tone?: string | null
+          trend_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliplyst_captions_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "cliplyst_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliplyst_captions_trend_id_fkey"
+            columns: ["trend_id"]
+            isOneToOne: false
+            referencedRelation: "cliplyst_trends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cliplyst_clips: {
+        Row: {
+          ai_score: number | null
+          created_at: string
+          duration_seconds: number | null
+          end_time: number | null
+          id: string
+          platform_id: string | null
+          start_time: number | null
+          status: string
+          storage_path: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          ai_score?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          end_time?: number | null
+          id?: string
+          platform_id?: string | null
+          start_time?: number | null
+          status?: string
+          storage_path?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          ai_score?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          end_time?: number | null
+          id?: string
+          platform_id?: string | null
+          start_time?: number | null
+          status?: string
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliplyst_clips_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "cliplyst_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliplyst_clips_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "cliplyst_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cliplyst_platforms: {
+        Row: {
+          aspect_ratio: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          max_duration_seconds: number | null
+          name: string
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          max_duration_seconds?: number | null
+          name: string
+        }
+        Update: {
+          aspect_ratio?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          max_duration_seconds?: number | null
+          name?: string
+        }
+        Relationships: []
+      }
+      cliplyst_schedules: {
+        Row: {
+          caption_id: string | null
+          clip_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          platform: string
+          published_at: string | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          caption_id?: string | null
+          clip_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          platform: string
+          published_at?: string | null
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          caption_id?: string | null
+          clip_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          platform?: string
+          published_at?: string | null
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliplyst_schedules_caption_id_fkey"
+            columns: ["caption_id"]
+            isOneToOne: false
+            referencedRelation: "cliplyst_captions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliplyst_schedules_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "cliplyst_clips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cliplyst_trends: {
+        Row: {
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_selected: boolean | null
+          niche: string
+          platform: string
+          scraped_at: string
+          source_url: string | null
+          title: string
+          trend_score: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_selected?: boolean | null
+          niche: string
+          platform: string
+          scraped_at?: string
+          source_url?: string | null
+          title: string
+          trend_score?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_selected?: boolean | null
+          niche?: string
+          platform?: string
+          scraped_at?: string
+          source_url?: string | null
+          title?: string
+          trend_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cliplyst_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          file_size_bytes: number | null
+          id: string
+          mime_type: string | null
+          status: string
+          storage_path: string
+          thumbnail_path: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: string
+          storage_path: string
+          thumbnail_path?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: string
+          storage_path?: string
+          thumbnail_path?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expire_links: {
         Row: {
           created_at: string
@@ -363,7 +660,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cliplyst_calculate_trend_score: {
+        Args: { _engagement?: number; _relevance?: number; _velocity?: number }
+        Returns: number
+      }
     }
     Enums: {
       subscription_status: "trial" | "active" | "cancelled" | "expired"
